@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      kitchen_assignments: {
+        Row: {
+          assignment_date: string
+          created_at: string
+          id: string
+          profile_ids: string[]
+          team_type: string
+        }
+        Insert: {
+          assignment_date: string
+          created_at?: string
+          id?: string
+          profile_ids: string[]
+          team_type: string
+        }
+        Update: {
+          assignment_date?: string
+          created_at?: string
+          id?: string
+          profile_ids?: string[]
+          team_type?: string
+        }
+        Relationships: []
+      }
+      kitchen_queue: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string
+          last_duty_date: string | null
+          profile_id: string
+          queue_position: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          last_duty_date?: string | null
+          profile_id: string
+          queue_position: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          last_duty_date?: string | null
+          profile_id?: string
+          queue_position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_queue_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -41,6 +103,30 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      queue_history: {
+        Row: {
+          created_at: string
+          id: string
+          new_queue: Json
+          previous_queue: Json
+          rotation_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_queue: Json
+          previous_queue: Json
+          rotation_date: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_queue?: Json
+          previous_queue?: Json
+          rotation_date?: string
         }
         Relationships: []
       }
