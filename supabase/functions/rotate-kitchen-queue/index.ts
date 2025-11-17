@@ -15,7 +15,70 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Starting kitchen queue rotation...');
+    console.log('Starting kitchen queue rotation check...');
+
+    // CHECK IF ROTATION IS PAUSED
+    const { data: settings, error: settingsError } = await supabase
+      .from('rotation_settings')
+      .select('*')
+      .single();
+
+    if (settingsError) {
+      console.error('Error fetching rotation settings:', settingsError);
+      // Continue with rotation if error (fail-safe)
+    }
+
+    // Auto-resume if pause period expired
+    if (settings?.is_paused && settings?.paused_until) {
+      const now = new Date();
+      const pausedUntil = new Date(settings.paused_until);
+      
+      if (now >= pausedUntil) {
+        console.log('Auto-resuming rotation. 24-hour pause period expired.');
+        await supabase
+          .from('rotation_settings')
+          .update({ 
+            is_paused: false,
+            paused_until: null
+          })
+          .eq('id', settings.id);
+        
+        console.log('Rotation auto-resumed successfully. Proceeding with queue rotation...');
+      } else {
+        // Still paused
+        const hoursLeft = Math.ceil((pausedUntil.getTime() - now.getTime()) / (1000 * 60 * 60));
+        console.log(`Rotation is paused. Auto-resume in ${hoursLeft} hours.`);
+        console.log(`Reason: ${settings.paused_reason || 'No reason provided'}`);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            message: `Rotation paused for ${hoursLeft} more hours`,
+            paused_until: settings.paused_until,
+            paused_reason: settings.paused_reason
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    } else if (settings?.is_paused) {
+      // Paused but no end time set (shouldn't happen, but handle gracefully)
+      console.log('Rotation is paused indefinitely.');
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          message: 'Rotation is currently paused'
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Rotation is active. Proceeding with queue rotation...');
 
     // CRITICAL: Before rotating, handle pending skip requests
     const { data: pendingRequests } = await supabase
