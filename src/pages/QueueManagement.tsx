@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, RefreshCw, Plus, Trash2, GripVertical, Users } from "lucide-react";
+import { ArrowLeft, RefreshCw, Plus, Trash2, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -36,54 +33,77 @@ interface Profile {
   status: string;
 }
 
-interface SortableItemProps {
+interface AssignmentInfo {
+  todayDate: string;
+  tomorrowDate: string;
+  todayProfileIds: string[];
+  tomorrowProfileIds: string[];
+}
+
+interface QueueItemProps {
   item: QueueItem;
   index: number;
   onDelete: (id: string) => void;
+  assignmentInfo: AssignmentInfo | null;
 }
 
-const SortableQueueItem = ({ item, index, onDelete }: SortableItemProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+const QueueItemDisplay = ({ item, index, onDelete, assignmentInfo }: QueueItemProps) => {
+  const getAssignmentDate = () => {
+    if (!assignmentInfo) return null;
+    
+    // Check if this profile is in today's assignment
+    if (assignmentInfo.todayProfileIds.includes(item.profiles.id)) {
+      return { date: assignmentInfo.todayDate, team: 'today' };
+    }
+    
+    // Check if this profile is in tomorrow's assignment
+    if (assignmentInfo.tomorrowProfileIds.includes(item.profiles.id)) {
+      return { date: assignmentInfo.tomorrowDate, team: 'tomorrow' };
+    }
+    
+    return null;
   };
+
+  const assignmentDate = getAssignmentDate();
+  const isInAssignment = assignmentDate !== null;
+  const positionMatchesAssignment = 
+    (index < 5 && assignmentDate?.team === 'today') ||
+    (index >= 5 && index < 10 && assignmentDate?.team === 'tomorrow');
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       className={`flex items-center justify-between p-4 rounded-lg border ${
         index < 5 ? 'bg-primary/10 border-primary/20' : 
         index < 10 ? 'bg-secondary/10 border-secondary/20' : 
         'bg-background'
-      }`}
+      } ${!positionMatchesAssignment && isInAssignment ? 'border-destructive border-2' : ''}`}
     >
       <div className="flex items-center gap-4">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-          <GripVertical className="h-5 w-5 text-muted-foreground" />
-        </div>
         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary">
           {item.queue_position}
         </div>
         <div>
           <p className="font-medium">{item.profiles?.full_name}</p>
           <p className="text-sm text-muted-foreground">{item.profiles?.email}</p>
+          {assignmentDate && (
+            <div className="flex items-center gap-2 mt-1">
+              <Calendar className="h-3 w-3 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">
+                Assigned: {assignmentDate.date}
+              </p>
+              {!positionMatchesAssignment && (
+                <Badge variant="destructive" className="text-xs">Mismatch!</Badge>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2">
         <Badge variant={item.profiles?.status === 'active' ? 'default' : 'secondary'}>
           {item.profiles?.status}
         </Badge>
-        {index < 5 && <Badge variant="outline">Today's Team</Badge>}
-        {index >= 5 && index < 10 && <Badge variant="outline">Tomorrow's Team</Badge>}
+        {index < 5 && <Badge variant="outline">Position 1-5</Badge>}
+        {index >= 5 && index < 10 && <Badge variant="outline">Position 6-10</Badge>}
         <Button
           variant="ghost"
           size="icon"
@@ -111,14 +131,7 @@ const QueueManagement = () => {
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const [assignmentsExist, setAssignmentsExist] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const [assignmentInfo, setAssignmentInfo] = useState<AssignmentInfo | null>(null);
 
   useEffect(() => {
     if (role !== 'coordinator') {
@@ -149,16 +162,25 @@ const QueueManagement = () => {
       if (error) throw error;
       setQueue(data || []);
 
-      // Check if assignments exist for today or tomorrow
+      // Fetch assignment information for validation
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
       
       const { data: assignments } = await supabase
         .from('kitchen_assignments')
-        .select('id')
+        .select('assignment_date, team_type, profile_ids')
         .in('assignment_date', [today, tomorrow]);
 
-      setAssignmentsExist((assignments?.length || 0) > 0);
+      // Extract assignment info for validation
+      const todayAssignment = assignments?.find(a => a.assignment_date === today);
+      const tomorrowAssignment = assignments?.find(a => a.assignment_date === tomorrow);
+
+      setAssignmentInfo({
+        todayDate: today,
+        tomorrowDate: tomorrow,
+        todayProfileIds: todayAssignment?.profile_ids || [],
+        tomorrowProfileIds: tomorrowAssignment?.profile_ids || []
+      });
     } catch (error) {
       console.error('Error fetching queue:', error);
       toast({
@@ -310,7 +332,6 @@ const QueueManagement = () => {
       setItemToDelete(null);
       fetchQueue();
       fetchAvailableStudents();
-      await reorderQueue();
     } catch (error) {
       console.error('Error deleting queue item:', error);
       toast({
@@ -318,88 +339,6 @@ const QueueManagement = () => {
         description: "Failed to remove student from queue",
         variant: "destructive"
       });
-    }
-  };
-
-  const reorderQueue = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('kitchen_queue')
-        .select('id')
-        .order('queue_position', { ascending: true });
-
-      if (error) throw error;
-
-      const updates = (data || []).map((item, index) => ({
-        id: item.id,
-        queue_position: index + 1
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from('kitchen_queue')
-          .update({ queue_position: update.queue_position })
-          .eq('id', update.id);
-      }
-
-      fetchQueue();
-    } catch (error) {
-      console.error('Error reordering queue:', error);
-    }
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
-
-    if (assignmentsExist) {
-      toast({
-        title: "Cannot reorder queue",
-        description: "Assignments already exist for today/tomorrow. Use skip requests or wait for next rotation.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setQueue((items) => {
-      const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
-
-      const newItems = arrayMove(items, oldIndex, newIndex);
-      
-      updateQueuePositions(newItems);
-      
-      return newItems;
-    });
-  };
-
-  const updateQueuePositions = async (reorderedQueue: QueueItem[]) => {
-    try {
-      const updates = reorderedQueue.map((item, index) => ({
-        id: item.id,
-        queue_position: index + 1
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from('kitchen_queue')
-          .update({ queue_position: update.queue_position })
-          .eq('id', update.id);
-      }
-
-      toast({
-        title: "Success",
-        description: "Queue order updated"
-      });
-    } catch (error) {
-      console.error('Error updating queue positions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update queue order",
-        variant: "destructive"
-      });
-      fetchQueue();
     }
   };
 
@@ -444,6 +383,17 @@ const QueueManagement = () => {
     item.profiles?.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Check for mismatches
+  const hasMismatches = assignmentInfo && queue.some((item, index) => {
+    const isInToday = assignmentInfo.todayProfileIds.includes(item.profiles.id);
+    const isInTomorrow = assignmentInfo.tomorrowProfileIds.includes(item.profiles.id);
+    
+    if (isInToday && index >= 5) return true;
+    if (isInTomorrow && (index < 5 || index >= 10)) return true;
+    
+    return false;
+  });
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -467,12 +417,12 @@ const QueueManagement = () => {
           </Button>
         </div>
 
-        {/* Assignments Warning */}
-        {assignmentsExist && (
-          <Card className="bg-yellow-500/10 border-yellow-500/20">
+        {/* Mismatch Warning */}
+        {hasMismatches && (
+          <Card className="bg-destructive/10 border-destructive/20">
             <CardContent className="pt-6">
-              <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                ⚠️ Assignments exist for today/tomorrow. Manual queue reordering is disabled. Use skip requests or wait for the next rotation.
+              <p className="text-sm text-destructive font-medium">
+                ⚠️ Queue/Assignment Mismatch Detected! Students in the queue don't match their assigned dates.
               </p>
             </CardContent>
           </Card>
@@ -534,12 +484,12 @@ const QueueManagement = () => {
               </Dialog>
 
               <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Users className="h-4 w-4 mr-2" />
-                    Bulk Initialize
-                  </Button>
-                </DialogTrigger>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Bulk Initialize
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Bulk Initialize Queue</DialogTitle>
@@ -601,33 +551,20 @@ const QueueManagement = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-muted-foreground">Loading queue...</p>
-            ) : filteredQueue.length > 0 ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={filteredQueue.map(item => item.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {filteredQueue.map((item, index) => (
-                      <SortableQueueItem
-                        key={item.id}
-                        item={item}
-                        index={index}
-                        onDelete={handleDeleteClick}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+              <p className="text-center text-muted-foreground">Loading...</p>
+            ) : filteredQueue.length === 0 ? (
+              <p className="text-center text-muted-foreground">No students in queue</p>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No students in queue</p>
-                <p className="text-sm">Use "Add Student" or "Bulk Initialize" to get started</p>
+              <div className="space-y-2">
+                {filteredQueue.map((item, index) => (
+                  <QueueItemDisplay
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    onDelete={handleDeleteClick}
+                    assignmentInfo={assignmentInfo}
+                  />
+                ))}
               </div>
             )}
           </CardContent>
