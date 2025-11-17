@@ -225,6 +225,36 @@ Deno.serve(async (req) => {
         position2: 11
       });
 
+      // 8. Update tomorrow's kitchen_assignments to reflect the swap
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      
+      const { data: tomorrowAssignment, error: assignmentError } = await supabase
+        .from('kitchen_assignments')
+        .select('*')
+        .eq('assignment_date', tomorrow)
+        .maybeSingle();
+
+      if (tomorrowAssignment && !assignmentError) {
+        // Swap the profile IDs in the assignment array
+        const updatedProfileIds = tomorrowAssignment.profile_ids.map((id: string) => {
+          if (id === request.profile_id) return position11Student.profile_id;
+          if (id === position11Student.profile_id) return request.profile_id;
+          return id;
+        });
+
+        const { error: updateError } = await supabase
+          .from('kitchen_assignments')
+          .update({ profile_ids: updatedProfileIds })
+          .eq('id', tomorrowAssignment.id);
+
+        if (updateError) {
+          console.error('Error updating tomorrow assignment:', updateError);
+          // Note: Queue swap already succeeded, so we log but don't fail the request
+        } else {
+          console.log('Tomorrow assignment updated successfully');
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,

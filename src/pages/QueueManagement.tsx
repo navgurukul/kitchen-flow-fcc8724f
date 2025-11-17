@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, RefreshCw, Plus, Trash2, GripVertical, Users } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -36,30 +33,15 @@ interface Profile {
   status: string;
 }
 
-interface SortableItemProps {
+interface QueueItemProps {
   item: QueueItem;
   index: number;
   onDelete: (id: string) => void;
 }
 
-const SortableQueueItem = ({ item, index, onDelete }: SortableItemProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
+const QueueItem = ({ item, index, onDelete }: QueueItemProps) => {
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       className={`flex items-center justify-between p-4 rounded-lg border ${
         index < 5 ? 'bg-primary/10 border-primary/20' : 
         index < 10 ? 'bg-secondary/10 border-secondary/20' : 
@@ -67,9 +49,6 @@ const SortableQueueItem = ({ item, index, onDelete }: SortableItemProps) => {
       }`}
     >
       <div className="flex items-center gap-4">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-          <GripVertical className="h-5 w-5 text-muted-foreground" />
-        </div>
         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary">
           {item.queue_position}
         </div>
@@ -111,13 +90,6 @@ const QueueManagement = () => {
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   useEffect(() => {
     if (role !== 'coordinator') {
@@ -336,76 +308,6 @@ const QueueManagement = () => {
     }
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
-
-    setQueue((items) => {
-      const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
-
-      const newItems = arrayMove(items, oldIndex, newIndex);
-      
-      updateQueuePositions(newItems);
-      
-      return newItems;
-    });
-  };
-
-  const updateQueuePositions = async (reorderedQueue: QueueItem[]) => {
-    try {
-      const updates = reorderedQueue.map((item, index) => ({
-        id: item.id,
-        queue_position: index + 1
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from('kitchen_queue')
-          .update({ queue_position: update.queue_position })
-          .eq('id', update.id);
-      }
-
-      toast({
-        title: "Success",
-        description: "Queue order updated"
-      });
-    } catch (error) {
-      console.error('Error updating queue positions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update queue order",
-        variant: "destructive"
-      });
-      fetchQueue();
-    }
-  };
-
-  const handleManualRotation = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('rotate-kitchen-queue', {
-        body: {}
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Queue rotated successfully"
-      });
-
-      fetchQueue();
-    } catch (error) {
-      console.error('Error rotating queue:', error);
-      toast({
-        title: "Error",
-        description: "Failed to rotate queue",
-        variant: "destructive"
-      });
-    }
-  };
-
   const toggleStudentSelection = (studentId: string) => {
     setSelectedStudents(prev => {
       const newSet = new Set(prev);
@@ -442,12 +344,25 @@ const QueueManagement = () => {
             </div>
           </div>
           <Button onClick={signOut} variant="outline">
-            Sign Out
-          </Button>
-        </div>
+          Sign Out
+        </Button>
+      </div>
 
-        {/* Controls */}
-        <Card>
+      {/* Automated Rotation Notice */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3">
+            <Clock className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-medium text-foreground">Automated Queue Rotation</p>
+              <p className="text-sm text-muted-foreground">Queue automatically rotates at midnight (00:00 IST) every day</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Controls */}
+      <Card>
           <CardHeader>
             <CardTitle>Queue Controls</CardTitle>
           </CardHeader>
@@ -553,11 +468,6 @@ const QueueManagement = () => {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-
-              <Button onClick={handleManualRotation}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Rotate Queue
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -568,31 +478,20 @@ const QueueManagement = () => {
             <CardTitle>Current Queue ({queue.length} students)</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <p className="text-muted-foreground">Loading queue...</p>
-            ) : filteredQueue.length > 0 ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={filteredQueue.map(item => item.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {filteredQueue.map((item, index) => (
-                      <SortableQueueItem
-                        key={item.id}
-                        item={item}
-                        index={index}
-                        onDelete={handleDeleteClick}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            ) : (
+          {loading ? (
+            <p className="text-muted-foreground">Loading queue...</p>
+          ) : filteredQueue.length > 0 ? (
+            <div className="space-y-2">
+              {filteredQueue.map((item, index) => (
+                <QueueItem
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  onDelete={handleDeleteClick}
+                />
+              ))}
+            </div>
+          ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <p>No students in queue</p>
                 <p className="text-sm">Use "Add Student" or "Bulk Initialize" to get started</p>
