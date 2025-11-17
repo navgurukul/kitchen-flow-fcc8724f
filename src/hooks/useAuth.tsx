@@ -121,6 +121,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: 'Success',
         description: 'Signed out successfully',
       });
+      
+      // Redirect to auth page with full page reload to clear all state
+      window.location.href = '/auth';
     } catch (error: any) {
       toast({
         title: 'Error',
