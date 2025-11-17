@@ -108,19 +108,20 @@ Deno.serve(async (req) => {
     // Rotate queue: move top 5 to bottom
     const rotatedQueue = [...activeQueue.slice(5), ...activeQueue.slice(0, 5)];
     
-    // Update positions
-    for (let i = 0; i < rotatedQueue.length; i++) {
-      const { error: updateError } = await supabase
-        .from('kitchen_queue')
-        .update({
-          queue_position: i + 1,
-          last_duty_date: i < 5 ? today : rotatedQueue[i].last_duty_date
-        })
-        .eq('id', rotatedQueue[i].id);
+    // Batch update all positions using database function (efficient and atomic)
+    const positionUpdates = rotatedQueue.map((item, index) => ({
+      id: item.id,
+      queue_position: index + 1,
+      last_duty_date: index < 5 ? today : (item.last_duty_date || 'null')
+    }));
 
-      if (updateError) {
-        console.error('Error updating position:', updateError);
-      }
+    const { error: updateError } = await supabase.rpc('update_queue_positions_batch', {
+      position_updates: positionUpdates
+    });
+
+    if (updateError) {
+      console.error('Error updating queue positions:', updateError);
+      throw updateError;
     }
 
     console.log('Queue rotation completed successfully');

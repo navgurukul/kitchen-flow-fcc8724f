@@ -163,6 +163,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_queue_positions_batch: {
+        Args: { position_updates: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "coordinator" | "student"
