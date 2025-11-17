@@ -225,6 +225,48 @@ Deno.serve(async (req) => {
         position2: 11
       });
 
+      // 7. Update tomorrow's kitchen_assignments to reflect the swap
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowDate = tomorrow.toISOString().split('T')[0];
+
+      console.log('Updating kitchen_assignments for tomorrow:', tomorrowDate);
+
+      const { data: tomorrowAssignment, error: fetchAssignmentError } = await supabase
+        .from('kitchen_assignments')
+        .select('*')
+        .eq('assignment_date', tomorrowDate)
+        .eq('team_type', 'tomorrow')
+        .maybeSingle();
+
+      if (fetchAssignmentError) {
+        console.error('Error fetching tomorrow assignment:', fetchAssignmentError);
+      } else if (tomorrowAssignment) {
+        // Swap the profile_ids in the assignment array
+        const updatedProfileIds = tomorrowAssignment.profile_ids.map((id: string) => {
+          if (id === request.profile_id) {
+            return position11Student.profile_id;
+          }
+          if (id === position11Student.profile_id) {
+            return request.profile_id;
+          }
+          return id;
+        });
+
+        const { error: updateAssignmentError } = await supabase
+          .from('kitchen_assignments')
+          .update({ profile_ids: updatedProfileIds })
+          .eq('id', tomorrowAssignment.id);
+
+        if (updateAssignmentError) {
+          console.error('Error updating tomorrow assignment:', updateAssignmentError);
+          // Note: Queue positions already updated, but assignment out of sync
+          // This is logged for manual correction if needed
+        } else {
+          console.log('Successfully updated tomorrow assignment');
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
