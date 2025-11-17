@@ -111,6 +111,7 @@ const QueueManagement = () => {
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [assignmentsExist, setAssignmentsExist] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -147,6 +148,17 @@ const QueueManagement = () => {
 
       if (error) throw error;
       setQueue(data || []);
+
+      // Check if assignments exist for today or tomorrow
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      
+      const { data: assignments } = await supabase
+        .from('kitchen_assignments')
+        .select('id')
+        .in('assignment_date', [today, tomorrow]);
+
+      setAssignmentsExist((assignments?.length || 0) > 0);
     } catch (error) {
       console.error('Error fetching queue:', error);
       toast({
@@ -341,6 +353,15 @@ const QueueManagement = () => {
 
     if (!over || active.id === over.id) return;
 
+    if (assignmentsExist) {
+      toast({
+        title: "Cannot reorder queue",
+        description: "Assignments already exist for today/tomorrow. Use skip requests or wait for next rotation.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setQueue((items) => {
       const oldIndex = items.findIndex((item) => item.id === active.id);
       const newIndex = items.findIndex((item) => item.id === over.id);
@@ -445,6 +466,17 @@ const QueueManagement = () => {
             Sign Out
           </Button>
         </div>
+
+        {/* Assignments Warning */}
+        {assignmentsExist && (
+          <Card className="bg-yellow-500/10 border-yellow-500/20">
+            <CardContent className="pt-6">
+              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                ⚠️ Assignments exist for today/tomorrow. Manual queue reordering is disabled. Use skip requests or wait for the next rotation.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Controls */}
         <Card>
