@@ -17,6 +17,31 @@ Deno.serve(async (req) => {
 
     console.log('Starting kitchen queue rotation...');
 
+    // CRITICAL: Before rotating, handle pending skip requests
+    const { data: pendingRequests } = await supabase
+      .from('skip_requests')
+      .select('id')
+      .eq('status', 'pending');
+
+    if (pendingRequests && pendingRequests.length > 0) {
+      console.log(`Auto-rejecting ${pendingRequests.length} pending skip requests due to rotation`);
+      
+      // Mark all pending requests as expired/rejected
+      const { error: rejectError } = await supabase
+        .from('skip_requests')
+        .update({ 
+          status: 'rejected',
+          review_notes: 'Expired - queue was rotated',
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('status', 'pending');
+
+      if (rejectError) {
+        console.error('Error rejecting pending requests:', rejectError);
+        // Continue with rotation anyway
+      }
+    }
+
     // Get current queue ordered by position
     const { data: currentQueue, error: queueError } = await supabase
       .from('kitchen_queue')

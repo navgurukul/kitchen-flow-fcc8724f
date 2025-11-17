@@ -2,7 +2,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, ChefHat, Users, Calendar, Settings } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { LogOut, ChefHat, Users, Calendar, Settings, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +17,15 @@ interface TeamMember {
   status: string;
 }
 
+interface SkipRequest {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reason: string;
+  requested_at: string;
+  reviewed_at: string | null;
+  review_notes: string | null;
+}
+
 const Dashboard = () => {
   const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
@@ -21,6 +33,11 @@ const Dashboard = () => {
   const [todayTeam, setTodayTeam] = useState<TeamMember[]>([]);
   const [tomorrowTeam, setTomorrowTeam] = useState<TeamMember[]>([]);
   const [myPosition, setMyPosition] = useState<number | null>(null);
+  const [myProfileId, setMyProfileId] = useState<string | null>(null);
+  const [skipRequest, setSkipRequest] = useState<SkipRequest | null>(null);
+  const [showSkipDialog, setShowSkipDialog] = useState(false);
+  const [skipReason, setSkipReason] = useState('');
+  const [submittingSkip, setSubmittingSkip] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,6 +89,8 @@ const Dashboard = () => {
           .maybeSingle();
 
         if (profileData) {
+          setMyProfileId(profileData.id);
+          
           const { data: queueData } = await supabase
             .from('kitchen_queue')
             .select('queue_position')
@@ -80,6 +99,19 @@ const Dashboard = () => {
 
           if (queueData) {
             setMyPosition(queueData.queue_position);
+          }
+
+          // Fetch skip request if exists
+          const { data: skipData } = await supabase
+            .from('skip_requests')
+            .select('*')
+            .eq('profile_id', profileData.id)
+            .order('requested_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (skipData) {
+            setSkipRequest(skipData as SkipRequest);
           }
         }
       }
@@ -92,6 +124,68 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSkipRequest = async () => {
+    if (!myProfileId || !myPosition || skipReason.length < 20) {
+      toast({
+        title: "Invalid Request",
+        description: "Please provide a reason of at least 20 characters",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSubmittingSkip(true);
+      const { error } = await supabase
+        .from('skip_requests')
+        .insert({
+          profile_id: myProfileId,
+          queue_position_at_request: myPosition,
+          reason: skipReason,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Your skip request has been submitted. You'll be notified when it's reviewed.",
+      });
+
+      setShowSkipDialog(false);
+      setSkipReason('');
+      fetchTeamData(); // Refresh to show the new request
+    } catch (error) {
+      console.error('Error submitting skip request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit skip request",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmittingSkip(false);
+    }
+  };
+
+  const canRequestSkip = role === 'student' && 
+    myPosition !== null && 
+    myPosition >= 6 && 
+    myPosition <= 10 &&
+    !skipRequest;
+
+  const getSkipStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">Pending Review</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Rejected</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
     }
   };
 
@@ -206,11 +300,52 @@ const Dashboard = () => {
                     <div className="text-center p-4 bg-primary/10 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-1">Your Queue Position</p>
                       <p className="text-3xl font-bold text-primary">#{myPosition}</p>
+                      {myPosition >= 6 && myPosition <= 10 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          You're in tomorrow's team
+                        </p>
+                      )}
                     </div>
                   )}
-                  <Button className="w-full clay-button" variant="outline">
-                    Request Skip
-                  </Button>
+
+                  {/* Skip Request Status */}
+                  {skipRequest && (
+                    <div className="p-3 border rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Skip Request</span>
+                        {getSkipStatusBadge(skipRequest.status)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{skipRequest.reason}</p>
+                      {skipRequest.review_notes && (
+                        <div className="mt-2 p-2 bg-muted rounded text-xs">
+                          <p className="font-medium">Coordinator Notes:</p>
+                          <p>{skipRequest.review_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Skip Request Button */}
+                  {canRequestSkip && (
+                    <>
+                      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-900">Can't make it tomorrow?</p>
+                          <p className="text-xs text-blue-700 mt-1">
+                            Request to skip and swap with position 11
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        className="w-full clay-button" 
+                        variant="outline"
+                        onClick={() => setShowSkipDialog(true)}
+                      >
+                        Request Skip
+                      </Button>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -222,8 +357,12 @@ const Dashboard = () => {
                     <Settings className="h-4 w-4 mr-2" />
                     Manage Queue
                   </Button>
-                  <Button className="w-full clay-button" variant="outline">
-                    View Reports
+                  <Button 
+                    className="w-full clay-button" 
+                    variant="outline"
+                    onClick={() => navigate('/skip-requests')}
+                  >
+                    Skip Requests
                   </Button>
                 </>
               )}
@@ -240,10 +379,62 @@ const Dashboard = () => {
               <Button className="w-full" variant="outline" onClick={() => navigate('/queue-management')}>
                 Full Queue Management
               </Button>
+              <Button className="w-full" variant="outline" onClick={() => navigate('/skip-requests')}>
+                Manage Skip Requests
+              </Button>
             </CardContent>
           </Card>
         )}
       </main>
+
+      {/* Skip Request Dialog */}
+      <Dialog open={showSkipDialog} onOpenChange={setShowSkipDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request to Skip Tomorrow's Duty</DialogTitle>
+            <DialogDescription>
+              Your position ({myPosition}) will be swapped with the student at position 11.
+              Please provide a reason for your request (minimum 20 characters).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="skip-reason">Reason for Skip Request</Label>
+              <Textarea
+                id="skip-reason"
+                value={skipReason}
+                onChange={(e) => setSkipReason(e.target.value)}
+                placeholder="E.g., Doctor's appointment, family emergency, etc."
+                rows={4}
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {skipReason.length}/20 characters minimum
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowSkipDialog(false);
+                setSkipReason('');
+              }}
+              disabled={submittingSkip}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSkipRequest}
+              disabled={submittingSkip || skipReason.length < 20}
+            >
+              {submittingSkip ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
