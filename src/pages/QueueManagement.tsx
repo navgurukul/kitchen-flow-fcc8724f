@@ -187,7 +187,17 @@ const QueueManagement = () => {
     if (!selectedStudent) return;
 
     try {
-      const maxPosition = queue.length > 0 ? Math.max(...queue.map(q => q.queue_position)) : 0;
+      // Query database for the actual max position
+      const { data: maxData, error: maxError } = await supabase
+        .from('kitchen_queue')
+        .select('queue_position')
+        .order('queue_position', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (maxError) throw maxError;
+      
+      const maxPosition = maxData?.queue_position || 0;
       
       const { error } = await supabase
         .from('kitchen_queue')
@@ -221,9 +231,21 @@ const QueueManagement = () => {
     if (selectedStudents.size === 0) return;
 
     try {
+      // Query database for the actual max position
+      const { data: maxData, error: maxError } = await supabase
+        .from('kitchen_queue')
+        .select('queue_position')
+        .order('queue_position', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (maxError) throw maxError;
+      
+      const maxPosition = maxData?.queue_position || 0;
+
       const studentsToAdd = Array.from(selectedStudents).map((profileId, index) => ({
         profile_id: profileId,
-        queue_position: index + 1
+        queue_position: maxPosition + index + 1
       }));
 
       const { error } = await supabase
