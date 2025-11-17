@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { LogOut, ChefHat, Users, Calendar, Settings, AlertCircle } from "lucide-react";
+import { LogOut, ChefHat, Users, Calendar, Settings, AlertCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -39,10 +39,16 @@ const Dashboard = () => {
   const [skipReason, setSkipReason] = useState('');
   const [submittingSkip, setSubmittingSkip] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [rotationSettings, setRotationSettings] = useState<any>(null);
+  const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [pauseReason, setPauseReason] = useState('');
 
   useEffect(() => {
     fetchTeamData();
-  }, [user]);
+    if (role === 'coordinator') {
+      fetchRotationSettings();
+    }
+  }, [user, role]);
 
   const fetchTeamData = async () => {
     try {
@@ -125,6 +131,50 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchRotationSettings = async () => {
+    const { data } = await supabase
+      .from('rotation_settings')
+      .select('*')
+      .single();
+    setRotationSettings(data);
+  };
+
+  const handlePauseRotation = async () => {
+    const pausedUntil = new Date();
+    pausedUntil.setHours(pausedUntil.getHours() + 24); // Add 24 hours
+
+    const { error } = await supabase
+      .from('rotation_settings')
+      .update({
+        is_paused: true,
+        paused_by: user?.id,
+        paused_at: new Date().toISOString(),
+        paused_until: pausedUntil.toISOString(),
+        paused_reason: pauseReason || 'No reason provided'
+      })
+      .eq('id', rotationSettings?.id);
+
+    if (!error) {
+      toast({ title: 'Queue rotation paused for 24 hours' });
+      fetchRotationSettings();
+      setShowPauseDialog(false);
+      setPauseReason('');
+    } else {
+      toast({ 
+        title: 'Failed to pause rotation', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const getTimeRemaining = () => {
+    if (!rotationSettings?.paused_until) return '';
+    const now = new Date();
+    const pausedUntil = new Date(rotationSettings.paused_until);
+    const hoursLeft = Math.ceil((pausedUntil.getTime() - now.getTime()) / (1000 * 60 * 60));
+    return hoursLeft > 0 ? `${hoursLeft} hours` : 'Resuming soon...';
   };
 
   const handleSkipRequest = async () => {
@@ -368,6 +418,58 @@ const Dashboard = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Rotation Control Card (Coordinators Only) */}
+          {role === 'coordinator' && (
+            <Card className="clay-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Rotation Control
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {rotationSettings?.is_paused ? (
+                    <>
+                      <Badge variant="destructive" className="mb-2">
+                        Rotation Paused
+                      </Badge>
+                      <div className="text-sm space-y-2">
+                        <p className="text-muted-foreground">
+                          Auto-resume in: <strong>{getTimeRemaining()}</strong>
+                        </p>
+                        <p className="text-muted-foreground">
+                          Paused at: {new Date(rotationSettings.paused_at).toLocaleString()}
+                        </p>
+                        {rotationSettings.paused_reason && (
+                          <p>
+                            <strong>Reason:</strong> {rotationSettings.paused_reason}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="default" className="mb-2">
+                        Rotation Active
+                      </Badge>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Next rotation: Tonight at 12:00 AM
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowPauseDialog(true)} 
+                        className="w-full"
+                      >
+                        Pause for 24 Hours
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {role === 'coordinator' && (
@@ -431,6 +533,44 @@ const Dashboard = () => {
               disabled={submittingSkip || skipReason.length < 20}
             >
               {submittingSkip ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pause Rotation Dialog */}
+      <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pause Queue Rotation</DialogTitle>
+            <DialogDescription>
+              This will pause the automatic queue rotation for the next 24 hours. 
+              It will automatically resume after that.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Reason (optional)</Label>
+              <Textarea
+                value={pauseReason}
+                onChange={(e) => setPauseReason(e.target.value)}
+                placeholder="e.g., Holiday, maintenance, event day..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowPauseDialog(false);
+                setPauseReason('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handlePauseRotation}>
+              Pause for 24 Hours
             </Button>
           </DialogFooter>
         </DialogContent>

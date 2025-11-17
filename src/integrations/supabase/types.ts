@@ -130,6 +130,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rotation_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_paused: boolean
+          paused_at: string | null
+          paused_by: string | null
+          paused_reason: string | null
+          paused_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          paused_at?: string | null
+          paused_by?: string | null
+          paused_reason?: string | null
+          paused_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          paused_at?: string | null
+          paused_by?: string | null
+          paused_reason?: string | null
+          paused_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       skip_requests: {
         Row: {
           created_at: string
