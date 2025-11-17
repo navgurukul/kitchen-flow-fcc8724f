@@ -1,51 +1,23 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChefHat } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
 
 const Auth = () => {
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupName, setSignupName] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const { signIn, signUp } = useAuth();
+  const { signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    const { error } = await signIn(loginEmail, loginPassword);
-    
-    if (!error) {
+  useEffect(() => {
+    if (user) {
       navigate('/');
     }
-    
-    setLoading(false);
-  };
+  }, [user, navigate]);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
-    
-    if (!error) {
-      // Clear form
-      setSignupEmail('');
-      setSignupPassword('');
-      setSignupName('');
-    }
-    
-    setLoading(false);
+  const handleGoogleSignIn = async () => {
+    await signInWithGoogle();
   };
 
   return (
@@ -66,98 +38,25 @@ const Auth = () => {
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <p className="text-center text-sm text-muted-foreground">
+              Sign in with your NavGurukul Google account
+            </p>
             
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="student@university.edu"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                    className="claymorphic"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                    className="claymorphic"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full shadow-medium"
-                  disabled={loading}
-                >
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-            </TabsContent>
+            <Button
+              onClick={handleGoogleSignIn}
+              variant="outline"
+              className="w-full h-12 text-base shadow-medium gap-3"
+            >
+              <FcGoogle className="w-6 h-6" />
+              Sign in with Google
+            </Button>
             
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    required
-                    className="claymorphic"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="student@university.edu"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    required
-                    className="claymorphic"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="claymorphic"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full shadow-medium"
-                  disabled={loading}
-                >
-                  {loading ? 'Creating account...' : 'Create Account'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+            <div className="text-center text-xs text-muted-foreground mt-4">
+              Only @navgurukul.org email addresses are allowed
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

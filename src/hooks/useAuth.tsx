@@ -10,8 +10,7 @@ interface AuthContextType {
   session: Session | null;
   role: UserRole | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -79,43 +78,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signInWithGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-      
-      return { error };
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-      return { error };
-    }
-  };
-
-  const signUp = async (email: string, password: string, fullName: string) => {
-    try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+            hd: 'navgurukul.org',
           },
         },
       });
@@ -126,18 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           description: error.message,
           variant: 'destructive',
         });
-      } else {
-        toast({
-          title: 'Success',
-          description: 'Account created successfully! Please check your email to verify your account.',
-        });
       }
       
       return { error };
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred',
+        description: 'Failed to sign in with Google',
         variant: 'destructive',
       });
       return { error };
@@ -164,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
