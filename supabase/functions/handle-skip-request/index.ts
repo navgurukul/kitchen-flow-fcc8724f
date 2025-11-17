@@ -118,30 +118,46 @@ Deno.serve(async (req) => {
         // Mark request as invalidated
         await supabase
           .from('skip_requests')
-          .update({ 
+          .update({
             status: 'rejected',
-            review_notes: 'Position changed - student no longer in tomorrow\'s team (positions 6-10)',
             reviewed_by: coordinatorProfile.id,
-            reviewed_at: new Date().toISOString()
+            reviewed_at: new Date().toISOString(),
+            review_notes: `Request invalidated - student moved from position ${request.queue_position_at_request} to ${studentQueue.queue_position}`
           })
           .eq('id', requestId);
-        
+
         return new Response(
-          JSON.stringify({ error: 'Student position has changed - request invalidated' }),
+          JSON.stringify({ 
+            error: `Student is no longer in positions 6-10. Current position: ${studentQueue.queue_position}`,
+            invalidated: true
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // 4. Verify student is still active
       if (studentQueue.profiles.status !== 'active') {
         return new Response(
-          JSON.stringify({ error: 'Student is no longer active' }),
+          JSON.stringify({ error: 'Student is inactive - cannot perform swap' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // 5. Get student at position 11 and verify they exist and are active
-      const { data: position11Student, error: pos11Error } = await supabase
+      // 4. Get recently approved skip requests from today to exclude from swap
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
+      const { data: recentApprovals } = await supabase
+        .from('skip_requests')
+        .select('profile_id')
+        .eq('status', 'approved')
+        .gte('reviewed_at', todayStart.toISOString());
+      
+      const excludedProfileIds = recentApprovals?.map(r => r.profile_id) || [];
+      
+      console.log('Excluded profile IDs from today\'s approved requests:', excludedProfileIds);
+      
+      // 5. Find next eligible student from position 11 onwards (excluding recently swapped)
+      let eligibleStudentQuery = supabase
         .from('kitchen_queue')
         .select(`
           *,
@@ -150,22 +166,33 @@ Deno.serve(async (req) => {
             status
           )
         `)
-        .eq('queue_position', 11)
-        .single();
+        .gte('queue_position', 11)
+        .eq('profiles.status', 'active')
+        .order('queue_position', { ascending: true });
+      
+      // Exclude recently approved profile_ids if any exist
+      if (excludedProfileIds.length > 0) {
+        eligibleStudentQuery = eligibleStudentQuery.not('profile_id', 'in', `(${excludedProfileIds.join(',')})`);
+      }
+      
+      const { data: eligibleStudent, error: eligibleError } = await eligibleStudentQuery
+        .limit(1)
+        .maybeSingle();
 
-      if (pos11Error || !position11Student) {
+      if (eligibleError || !eligibleStudent) {
+        console.error('No eligible student found:', eligibleError);
         return new Response(
-          JSON.stringify({ error: 'Queue too short - no student at position 11 available for swap' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            error: 'No eligible student available for swap. All students after position 10 have already been involved in skip approvals today or are inactive.' 
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      if (position11Student.profiles.status !== 'active') {
-        return new Response(
-          JSON.stringify({ error: 'Student at position 11 is inactive - cannot perform swap' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      console.log('Selected eligible student:', {
+        name: eligibleStudent.profiles.full_name,
+        position: eligibleStudent.queue_position
+      });
 
       // 6. Update request status FIRST (before swap)
       const { error: updateReqError } = await supabase
@@ -174,7 +201,7 @@ Deno.serve(async (req) => {
           status: 'approved',
           reviewed_by: coordinatorProfile.id,
           reviewed_at: new Date().toISOString(),
-          review_notes: reviewNotes || `Swapped position ${studentQueue.queue_position} with ${position11Student.profiles.full_name} at position 11`
+          review_notes: reviewNotes || `Swapped position ${studentQueue.queue_position} with ${eligibleStudent.profiles.full_name} at position ${eligibleStudent.queue_position}`
         })
         .eq('id', requestId);
 
@@ -190,13 +217,13 @@ Deno.serve(async (req) => {
       const swapUpdates = [
         {
           id: studentQueue.id,
-          queue_position: 11,
+          queue_position: eligibleStudent.queue_position,
           last_duty_date: studentQueue.last_duty_date || 'null'
         },
         {
-          id: position11Student.id,
+          id: eligibleStudent.id,
           queue_position: studentQueue.queue_position,
-          last_duty_date: position11Student.last_duty_date || 'null'
+          last_duty_date: eligibleStudent.last_duty_date || 'null'
         }
       ];
 
@@ -221,8 +248,8 @@ Deno.serve(async (req) => {
       console.log('Swap successful:', {
         student1: request.profiles.full_name,
         position1: studentQueue.queue_position,
-        student2: position11Student.profiles.full_name,
-        position2: 11
+        student2: eligibleStudent.profiles.full_name,
+        position2: eligibleStudent.queue_position
       });
 
       // 8. Update tomorrow's kitchen_assignments to reflect the swap
@@ -237,8 +264,8 @@ Deno.serve(async (req) => {
       if (tomorrowAssignment && !assignmentError) {
         // Swap the profile IDs in the assignment array
         const updatedProfileIds = tomorrowAssignment.profile_ids.map((id: string) => {
-          if (id === request.profile_id) return position11Student.profile_id;
-          if (id === position11Student.profile_id) return request.profile_id;
+          if (id === request.profile_id) return eligibleStudent.profile_id;
+          if (id === eligibleStudent.profile_id) return request.profile_id;
           return id;
         });
 
@@ -248,8 +275,7 @@ Deno.serve(async (req) => {
           .eq('id', tomorrowAssignment.id);
 
         if (updateError) {
-          console.error('Error updating tomorrow assignment:', updateError);
-          // Note: Queue swap already succeeded, so we log but don't fail the request
+          console.error('Failed to update tomorrow assignment:', updateError);
         } else {
           console.log('Tomorrow assignment updated successfully');
         }
@@ -262,8 +288,8 @@ Deno.serve(async (req) => {
           swapped: {
             student1: request.profiles.full_name,
             originalPosition: studentQueue.queue_position,
-            student2: position11Student.profiles.full_name,
-            newPosition: 11
+            student2: eligibleStudent.profiles.full_name,
+            newPosition: eligibleStudent.queue_position
           }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
