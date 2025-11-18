@@ -20,6 +20,8 @@ interface Student {
   email: string;
   status: string;
   created_at: string;
+  user_id: string;
+  role: 'coordinator' | 'student';
   in_queue?: boolean;
   queue_position?: number;
   in_today_team?: boolean;
@@ -57,6 +59,14 @@ const StudentManagement = () => {
     inTomorrowTeam: false,
   });
 
+  const [roleHandoffDialog, setRoleHandoffDialog] = useState<{
+    open: boolean;
+    targetStudent: Student | null;
+  }>({
+    open: false,
+    targetStudent: null,
+  });
+
   useEffect(() => {
     if (role !== 'coordinator') {
       navigate('/dashboard');
@@ -69,10 +79,19 @@ const StudentManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch all students
+      // Fetch all students with roles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, status, created_at, last_queue_position')
+        .select(`
+          id, 
+          full_name, 
+          email, 
+          status, 
+          created_at, 
+          last_queue_position,
+          user_id,
+          user_roles!inner(role)
+        `)
         .order('full_name');
 
       if (profilesError) throw profilesError;
@@ -114,7 +133,13 @@ const StudentManagement = () => {
         const canDeactivate = canChangeStatus && !inTodayTeam;
 
         return {
-          ...profile,
+          id: profile.id,
+          full_name: profile.full_name,
+          email: profile.email,
+          status: profile.status,
+          created_at: profile.created_at,
+          user_id: profile.user_id,
+          role: (profile.user_roles as any)[0]?.role || 'student',
           in_queue: inQueue,
           queue_position: queueData?.find(q => q.profile_id === profile.id)?.queue_position,
           in_today_team: inTodayTeam,
@@ -419,6 +444,73 @@ const StudentManagement = () => {
     }
   };
 
+  const handleRoleHandoff = async (targetStudent: Student) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to perform this action.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (user.id === targetStudent.user_id) {
+      toast({
+        title: "Invalid Action",
+        description: "You are already a coordinator.",
+      });
+      return;
+    }
+
+    if (targetStudent.role === 'coordinator') {
+      toast({
+        title: "Invalid Action",
+        description: `${targetStudent.full_name} is already a coordinator.`,
+      });
+      return;
+    }
+
+    try {
+      const { error: promoteError } = await supabase
+        .from('user_roles')
+        .update({ role: 'coordinator' })
+        .eq('user_id', targetStudent.user_id);
+
+      if (promoteError) throw promoteError;
+
+      const { error: demoteError } = await supabase
+        .from('user_roles')
+        .update({ role: 'student' })
+        .eq('user_id', user.id);
+
+      if (demoteError) throw demoteError;
+
+      toast({
+        title: "Coordinator Role Transferred",
+        description: `${targetStudent.full_name} is now the coordinator. You have been returned to student role.`,
+      });
+
+      await fetchStudents();
+
+      setTimeout(() => {
+        toast({
+          title: "Access Changed",
+          description: "Redirecting to dashboard as you are no longer a coordinator...",
+        });
+        navigate('/');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Error during role handoff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to transfer coordinator role. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
       student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -533,6 +625,7 @@ const StudentManagement = () => {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Role</TableHead>
                       <TableHead>Assignment Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -546,6 +639,38 @@ const StudentManagement = () => {
                           <Badge variant={student.status === 'active' ? 'default' : 'secondary'}>
                             {student.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={student.role === 'coordinator' ? 'default' : 'secondary'}
+                              className={student.role === 'coordinator' ? 'bg-purple-500' : ''}
+                            >
+                              {student.role === 'coordinator' ? '👑 Coordinator' : '🎓 Student'}
+                            </Badge>
+                            {student.role === 'student' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setRoleHandoffDialog({
+                                        open: true,
+                                        targetStudent: student,
+                                      })}
+                                      className="h-7 px-2 text-xs"
+                                    >
+                                      Promote
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Transfer coordinator role to {student.full_name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
@@ -694,6 +819,63 @@ const StudentManagement = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmStatusChange}>
               {confirmDialog.currentStatus === 'active' ? 'Deactivate' : 'Activate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Role Handoff Confirmation Dialog */}
+      <AlertDialog 
+        open={roleHandoffDialog.open} 
+        onOpenChange={(open) => setRoleHandoffDialog({ open, targetStudent: null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Transfer Coordinator Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              {roleHandoffDialog.targetStudent && (
+                <>
+                  <p className="mb-3">
+                    You are about to transfer the coordinator role to{' '}
+                    <strong>{roleHandoffDialog.targetStudent.full_name}</strong>.
+                  </p>
+                  
+                  <div className="space-y-3 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-yellow-600 dark:text-yellow-400">
+                          This action will:
+                        </p>
+                        <ul className="mt-2 space-y-1 text-muted-foreground list-disc list-inside">
+                          <li>Grant {roleHandoffDialog.targetStudent.full_name} full coordinator access</li>
+                          <li><strong>Remove YOUR coordinator privileges</strong></li>
+                          <li>You will be demoted to Student role</li>
+                          <li>You will be redirected to the dashboard</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Only one coordinator can exist at a time. Are you sure you want to proceed?
+                  </p>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (roleHandoffDialog.targetStudent) {
+                  handleRoleHandoff(roleHandoffDialog.targetStudent);
+                }
+                setRoleHandoffDialog({ open: false, targetStudent: null });
+              }}
+              className="bg-yellow-500 hover:bg-yellow-600"
+            >
+              Yes, Transfer Role
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
