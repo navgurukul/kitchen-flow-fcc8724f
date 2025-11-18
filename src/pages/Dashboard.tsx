@@ -53,8 +53,10 @@ const Dashboard = () => {
   const fetchTeamData = async () => {
     try {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      // Get dates in IST timezone (UTC+5:30)
+      const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+      const today = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + IST_OFFSET + 86400000).toISOString().split('T')[0];
 
       // Fetch today's and tomorrow's assignments
       const { data: assignments, error: assignError } = await supabase

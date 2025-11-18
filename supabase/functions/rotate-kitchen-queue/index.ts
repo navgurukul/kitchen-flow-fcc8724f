@@ -145,9 +145,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    // Get today's date in IST timezone (UTC+5:30)
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+    const today = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + IST_OFFSET + 86400000).toISOString().split('T')[0];
 
     // Take first 5 for today, next 5 for tomorrow
     const todayTeam = activeQueue.slice(0, 5);
