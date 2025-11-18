@@ -158,10 +158,106 @@ const StudentManagement = () => {
     });
   };
 
+  const handleQueueBackfill = async (deactivatedStudentId: string) => {
+    try {
+      console.log('Starting queue backfill for deactivated student:', deactivatedStudentId);
+      
+      // Step 1: Remove deactivated student from queue
+      const { error: deleteError } = await supabase
+        .from('kitchen_queue')
+        .delete()
+        .eq('profile_id', deactivatedStudentId);
+
+      if (deleteError) throw deleteError;
+
+      // Step 2: Get current queue
+      const { data: currentQueue, error: queueError } = await supabase
+        .from('kitchen_queue')
+        .select('id, profile_id, queue_position')
+        .order('queue_position', { ascending: true });
+
+      if (queueError) throw queueError;
+
+      // Step 3: Find next available active student (not in queue)
+      const queueProfileIds = currentQueue?.map(q => q.profile_id) || [];
+      
+      const { data: availableStudent, error: availableError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('status', 'active')
+        .not('id', 'in', `(${queueProfileIds.join(',')})`)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (availableError) throw availableError;
+
+      // Step 4: Add available student to end of queue (if found)
+      if (availableStudent) {
+        const newPosition = (currentQueue?.length || 0) + 1;
+        
+        const { error: insertError } = await supabase
+          .from('kitchen_queue')
+          .insert({
+            profile_id: availableStudent.id,
+            queue_position: newPosition,
+            joined_at: new Date().toISOString(),
+          });
+
+        if (insertError) throw insertError;
+        
+        console.log(`Added ${availableStudent.full_name} to queue at position ${newPosition}`);
+        
+        toast({
+          title: "Queue Backfilled",
+          description: `${availableStudent.full_name} has been added to the queue.`,
+        });
+      } else {
+        console.log('No available active students to backfill');
+        toast({
+          title: "Queue Updated",
+          description: "Student removed from queue. No active students available for backfill.",
+        });
+      }
+
+      // Step 5: Reorder all positions sequentially (1, 2, 3, 4, ...)
+      const { data: finalQueue, error: finalQueueError } = await supabase
+        .from('kitchen_queue')
+        .select('id, queue_position, last_duty_date')
+        .order('queue_position', { ascending: true });
+
+      if (finalQueueError) throw finalQueueError;
+
+      if (finalQueue && finalQueue.length > 0) {
+        const positionUpdates = finalQueue.map((item, index) => ({
+          id: item.id,
+          queue_position: index + 1,
+          last_duty_date: item.last_duty_date || 'null'
+        }));
+
+        const { error: updateError } = await supabase.rpc('update_queue_positions_batch', {
+          position_updates: positionUpdates
+        });
+
+        if (updateError) throw updateError;
+      }
+
+      console.log('Queue backfill completed successfully');
+    } catch (error) {
+      console.error('Error in queue backfill:', error);
+      toast({
+        title: "Warning",
+        description: "Student deactivated but queue backfill may have failed. Please check queue manually.",
+        variant: "default",
+      });
+    }
+  };
+
   const confirmStatusChange = async () => {
     if (!confirmDialog.studentId) return;
 
     try {
+      const student = students.find(s => s.id === confirmDialog.studentId);
       const newStatus = confirmDialog.currentStatus === 'active' ? 'inactive' : 'active';
       
       const { error } = await supabase
@@ -171,9 +267,14 @@ const StudentManagement = () => {
 
       if (error) throw error;
 
+      // If deactivating a student who is in the queue, handle backfill
+      if (newStatus === 'inactive' && student?.in_queue) {
+        await handleQueueBackfill(confirmDialog.studentId);
+      }
+
       toast({
         title: "Success",
-        description: `Student status updated to ${newStatus}.`,
+        description: `Student ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully.`,
       });
 
       // Refresh the students list
@@ -410,9 +511,9 @@ const StudentManagement = () => {
                     <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg mb-2">
                       <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
-                        <p className="font-medium text-yellow-500">Warning: Student is in queue</p>
+                        <p className="font-medium text-yellow-500">Student is in queue</p>
                         <p className="text-muted-foreground mt-1">
-                          This student will remain in the queue but marked as inactive.
+                          They will be automatically removed from the queue and replaced with the next available active student.
                         </p>
                       </div>
                     </div>
