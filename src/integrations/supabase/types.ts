@@ -82,6 +82,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          last_queue_position: number | null
           status: string
           updated_at: string
           user_id: string
@@ -91,6 +92,7 @@ export type Database = {
           email: string
           full_name: string
           id?: string
+          last_queue_position?: number | null
           status?: string
           updated_at?: string
           user_id: string
@@ -100,6 +102,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          last_queue_position?: number | null
           status?: string
           updated_at?: string
           user_id?: string
