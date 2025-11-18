@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, Users, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Users, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -36,10 +35,9 @@ interface Profile {
 interface QueueItemProps {
   item: QueueItem;
   index: number;
-  onDelete: (id: string) => void;
 }
 
-const QueueItem = ({ item, index, onDelete }: QueueItemProps) => {
+const QueueItem = ({ item, index }: QueueItemProps) => {
   return (
     <div
       className={`flex items-center justify-between p-4 rounded-lg border ${
@@ -68,14 +66,6 @@ const QueueItem = ({ item, index, onDelete }: QueueItemProps) => {
         )}
         {index < 5 && <Badge variant="outline">Today's Team</Badge>}
         {index >= 5 && index < 10 && <Badge variant="outline">Tomorrow's Team</Badge>}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(item.id)}
-          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );
@@ -93,8 +83,6 @@ const QueueManagement = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (role !== 'coordinator') {
@@ -247,69 +235,6 @@ const QueueManagement = () => {
         description: "Failed to initialize queue",
         variant: "destructive"
       });
-    }
-  };
-
-  const handleDeleteClick = (id: string) => {
-    setItemToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from('kitchen_queue')
-        .delete()
-        .eq('id', itemToDelete);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Student removed from queue"
-      });
-
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
-      fetchQueue();
-      fetchAvailableStudents();
-      await reorderQueue();
-    } catch (error) {
-      console.error('Error deleting queue item:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove student from queue",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const reorderQueue = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('kitchen_queue')
-        .select('id')
-        .order('queue_position', { ascending: true });
-
-      if (error) throw error;
-
-      const updates = (data || []).map((item, index) => ({
-        id: item.id,
-        queue_position: index + 1
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from('kitchen_queue')
-          .update({ queue_position: update.queue_position })
-          .eq('id', update.id);
-      }
-
-      fetchQueue();
-    } catch (error) {
-      console.error('Error reordering queue:', error);
     }
   };
 
@@ -492,7 +417,6 @@ const QueueManagement = () => {
                   key={item.id}
                   item={item}
                   index={index}
-                  onDelete={handleDeleteClick}
                 />
               ))}
             </div>
@@ -505,29 +429,6 @@ const QueueManagement = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Student from Queue</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove this student from the queue? The queue positions will be automatically reordered.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setDeleteDialogOpen(false);
-              setItemToDelete(null);
-            }}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
