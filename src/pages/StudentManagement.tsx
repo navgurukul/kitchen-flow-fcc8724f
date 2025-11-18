@@ -110,7 +110,7 @@ const StudentManagement = () => {
         const inTodayTeam = todayProfileIds.includes(profile.id);
         const inTomorrowTeam = tomorrowProfileIds.includes(profile.id);
         
-        const canChangeStatus = inQueue || inTomorrowTeam;
+        const canChangeStatus = profile.status === 'inactive' ? true : (inQueue || inTomorrowTeam);
         const canDeactivate = canChangeStatus && !inTodayTeam;
 
         return {
