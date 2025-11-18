@@ -61,6 +61,11 @@ const QueueItem = ({ item, index, onDelete }: QueueItemProps) => {
         <Badge variant={item.profiles?.status === 'active' ? 'default' : 'secondary'}>
           {item.profiles?.status}
         </Badge>
+        {item.profiles?.status === 'inactive' && (
+          <Badge variant="outline" className="text-yellow-500 border-yellow-500/20 bg-yellow-500/10">
+            ⚠️ Inactive
+          </Badge>
+        )}
         {index < 5 && <Badge variant="outline">Today's Team</Badge>}
         {index >= 5 && index < 10 && <Badge variant="outline">Tomorrow's Team</Badge>}
         <Button
