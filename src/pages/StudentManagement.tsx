@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Users, UserCheck, UserX, AlertTriangle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowLeft, Users, UserCheck, UserX, AlertTriangle, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getISTDate } from "@/lib/utils";
 
 interface Student {
   id: string;
@@ -20,6 +22,10 @@ interface Student {
   created_at: string;
   in_queue?: boolean;
   queue_position?: number;
+  in_today_team?: boolean;
+  in_tomorrow_team?: boolean;
+  can_change_status?: boolean;
+  can_deactivate?: boolean;
 }
 
 type StatusFilter = 'all' | 'active' | 'inactive';
@@ -38,12 +44,16 @@ const StudentManagement = () => {
     studentName: string;
     currentStatus: string;
     inQueue: boolean;
+    inTodayTeam: boolean;
+    inTomorrowTeam: boolean;
   }>({
     open: false,
     studentId: null,
     studentName: '',
     currentStatus: '',
     inQueue: false,
+    inTodayTeam: false,
+    inTomorrowTeam: false,
   });
 
   useEffect(() => {
@@ -73,17 +83,47 @@ const StudentManagement = () => {
 
       if (queueError) throw queueError;
 
-      // Merge the data
-      const studentsWithQueue = profilesData?.map(profile => {
-        const queueItem = queueData?.find(q => q.profile_id === profile.id);
+      // Fetch TODAY's team assignments
+      const today = getISTDate(0);
+      const { data: todayAssignment } = await supabase
+        .from('kitchen_assignments')
+        .select('profile_ids')
+        .eq('assignment_date', today)
+        .maybeSingle();
+
+      const todayProfileIds = todayAssignment?.profile_ids || [];
+
+      // Fetch TOMORROW's team assignments
+      const tomorrow = getISTDate(1);
+      const { data: tomorrowAssignment } = await supabase
+        .from('kitchen_assignments')
+        .select('profile_ids')
+        .eq('assignment_date', tomorrow)
+        .maybeSingle();
+
+      const tomorrowProfileIds = tomorrowAssignment?.profile_ids || [];
+
+      // Merge all data and calculate eligibility
+      const studentsWithEligibility = profilesData?.map(profile => {
+        const inQueue = !!queueData?.find(q => q.profile_id === profile.id);
+        const inTodayTeam = todayProfileIds.includes(profile.id);
+        const inTomorrowTeam = tomorrowProfileIds.includes(profile.id);
+        
+        const canChangeStatus = inQueue || inTomorrowTeam;
+        const canDeactivate = canChangeStatus && !inTodayTeam;
+
         return {
           ...profile,
-          in_queue: !!queueItem,
-          queue_position: queueItem?.queue_position,
+          in_queue: inQueue,
+          queue_position: queueData?.find(q => q.profile_id === profile.id)?.queue_position,
+          in_today_team: inTodayTeam,
+          in_tomorrow_team: inTomorrowTeam,
+          can_change_status: canChangeStatus,
+          can_deactivate: canDeactivate,
         };
       }) || [];
 
-      setStudents(studentsWithQueue);
+      setStudents(studentsWithEligibility);
     } catch (error: any) {
       console.error('Error fetching students:', error);
       toast({
@@ -97,12 +137,24 @@ const StudentManagement = () => {
   };
 
   const handleStatusToggle = (student: Student) => {
+    // Extra validation: prevent deactivation if in today's team
+    if (student.status === 'active' && student.in_today_team) {
+      toast({
+        title: "Cannot Deactivate",
+        description: "This student is in today's kitchen team and cannot be deactivated.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       studentId: student.id,
       studentName: student.full_name,
       currentStatus: student.status,
       inQueue: student.in_queue || false,
+      inTodayTeam: student.in_today_team || false,
+      inTomorrowTeam: student.in_tomorrow_team || false,
     });
   };
 
@@ -134,7 +186,7 @@ const StudentManagement = () => {
         variant: "destructive",
       });
     } finally {
-      setConfirmDialog({ open: false, studentId: null, studentName: '', currentStatus: '', inQueue: false });
+      setConfirmDialog({ open: false, studentId: null, studentName: '', currentStatus: '', inQueue: false, inTodayTeam: false, inTomorrowTeam: false });
     }
   };
 
@@ -252,7 +304,7 @@ const StudentManagement = () => {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>In Queue</TableHead>
+                      <TableHead>Assignment Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -267,27 +319,69 @@ const StudentManagement = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {student.in_queue ? (
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">Position {student.queue_position}</Badge>
-                              {student.status === 'inactive' && (
-                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">No</span>
-                          )}
+                          <div className="flex flex-wrap gap-1">
+                            {student.in_today_team && (
+                              <Badge variant="default" className="bg-orange-500 hover:bg-orange-600">
+                                Today's Team
+                              </Badge>
+                            )}
+                            {student.in_tomorrow_team && (
+                              <Badge variant="outline" className="border-blue-500 text-blue-500">
+                                Tomorrow's Team
+                              </Badge>
+                            )}
+                            {student.in_queue && (
+                              <Badge variant="outline">
+                                In Queue (#{student.queue_position})
+                              </Badge>
+                            )}
+                            {!student.can_change_status && (
+                              <Badge variant="secondary">
+                                Not Eligible
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="text-sm text-muted-foreground">
-                              {student.status === 'active' ? 'Active' : 'Inactive'}
-                            </span>
-                            <Switch
-                              checked={student.status === 'active'}
-                              onCheckedChange={() => handleStatusToggle(student)}
-                            />
-                          </div>
+                          {!student.can_change_status ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <Switch checked={student.status === 'active'} disabled={true} />
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Only students in queue or tomorrow's team can have status changed
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          ) : student.in_today_team && student.status === 'active' ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <Switch checked={true} disabled={true} />
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Cannot deactivate - student is in today's kitchen team
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="text-sm text-muted-foreground">
+                                {student.status === 'active' ? 'Active' : 'Inactive'}
+                              </span>
+                              <Switch
+                                checked={student.status === 'active'}
+                                onCheckedChange={() => handleStatusToggle(student)}
+                              />
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -313,18 +407,22 @@ const StudentManagement = () => {
                     You are about to deactivate <strong>{confirmDialog.studentName}</strong>.
                   </p>
                   {confirmDialog.inQueue && (
-                    <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg mb-2">
                       <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
                         <p className="font-medium text-yellow-500">Warning: Student is in queue</p>
                         <p className="text-muted-foreground mt-1">
-                          This student will remain in the queue but marked as inactive. 
-                          You may want to remove them from the queue separately.
+                          This student will remain in the queue but marked as inactive.
                         </p>
                       </div>
                     </div>
                   )}
-                  <p className="mt-2">
+                  {confirmDialog.inTomorrowTeam && (
+                    <p className="text-blue-600 font-semibold mb-2">
+                      Note: This student is assigned to tomorrow's kitchen team.
+                    </p>
+                  )}
+                  <p>
                     Inactive students will not appear in the "Available Students" list for adding to the queue.
                   </p>
                 </>
@@ -333,6 +431,11 @@ const StudentManagement = () => {
                   <p>
                     You are about to activate <strong>{confirmDialog.studentName}</strong>.
                   </p>
+                  {confirmDialog.inTodayTeam && (
+                    <p className="mt-2 text-green-600 font-semibold">
+                      Note: This student is in today's kitchen team.
+                    </p>
+                  )}
                   <p className="mt-2">
                     Active students can be added to the kitchen duty queue.
                   </p>
