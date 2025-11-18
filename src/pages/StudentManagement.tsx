@@ -26,6 +26,7 @@ interface Student {
   in_tomorrow_team?: boolean;
   can_change_status?: boolean;
   can_deactivate?: boolean;
+  last_queue_position?: number | null;
 }
 
 type StatusFilter = 'all' | 'active' | 'inactive';
@@ -71,7 +72,7 @@ const StudentManagement = () => {
       // Fetch all students
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, status, created_at')
+        .select('id, full_name, email, status, created_at, last_queue_position')
         .order('full_name');
 
       if (profilesError) throw profilesError;
@@ -120,6 +121,7 @@ const StudentManagement = () => {
           in_tomorrow_team: inTomorrowTeam,
           can_change_status: canChangeStatus,
           can_deactivate: canDeactivate,
+          last_queue_position: profile.last_queue_position,
         };
       }) || [];
 
@@ -161,6 +163,27 @@ const StudentManagement = () => {
   const handleQueueBackfill = async (deactivatedStudentId: string) => {
     try {
       console.log('Starting queue backfill for deactivated student:', deactivatedStudentId);
+      
+      // Step 0: GET AND SAVE the student's current queue position BEFORE deletion
+      const { data: queueRecord, error: fetchError } = await supabase
+        .from('kitchen_queue')
+        .select('queue_position')
+        .eq('profile_id', deactivatedStudentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (queueRecord) {
+        // Save the position to the profiles table
+        const { error: saveError } = await supabase
+          .from('profiles')
+          .update({ last_queue_position: queueRecord.queue_position })
+          .eq('id', deactivatedStudentId);
+
+        if (saveError) throw saveError;
+        
+        console.log(`Saved queue position ${queueRecord.queue_position} for student ${deactivatedStudentId}`);
+      }
       
       // Step 1: Remove deactivated student from queue
       const { error: deleteError } = await supabase
@@ -253,6 +276,106 @@ const StudentManagement = () => {
     }
   };
 
+  const handleQueueRestoration = async (activatedStudentId: string) => {
+    try {
+      console.log('Starting queue restoration for activated student:', activatedStudentId);
+      
+      // Step 1: Check if student has a saved position
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('last_queue_position, full_name')
+        .eq('id', activatedStudentId)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const savedPosition = profile.last_queue_position;
+
+      // If no saved position, student was never in queue or position already used
+      if (!savedPosition) {
+        console.log('No saved queue position found - student will not be added to queue');
+        toast({
+          title: "Student Activated",
+          description: `${profile.full_name} is now active but not added to queue (no previous position found).`,
+        });
+        return;
+      }
+
+      console.log(`Found saved position: ${savedPosition}`);
+
+      // Step 2: Get current queue to check if position is still valid
+      const { data: currentQueue, error: queueError } = await supabase
+        .from('kitchen_queue')
+        .select('id, profile_id, queue_position, last_duty_date')
+        .order('queue_position', { ascending: true });
+
+      if (queueError) throw queueError;
+
+      const currentQueueLength = currentQueue?.length || 0;
+
+      // Determine insertion position (cap at current queue length + 1)
+      const insertPosition = Math.min(savedPosition, currentQueueLength + 1);
+
+      console.log(`Inserting at position ${insertPosition} (saved: ${savedPosition}, current queue length: ${currentQueueLength})`);
+
+      // Step 3: Shift everyone at insertion position and below down by 1
+      if (currentQueue && currentQueue.length > 0) {
+        // Create update array: everyone at insertPosition or higher gets +1
+        const shiftUpdates = currentQueue
+          .filter(item => item.queue_position >= insertPosition)
+          .map(item => ({
+            id: item.id,
+            queue_position: item.queue_position + 1,
+            last_duty_date: item.last_duty_date || 'null'
+          }));
+
+        if (shiftUpdates.length > 0) {
+          const { error: shiftError } = await supabase.rpc('update_queue_positions_batch', {
+            position_updates: shiftUpdates
+          });
+
+          if (shiftError) throw shiftError;
+          console.log(`Shifted ${shiftUpdates.length} students down to make room`);
+        }
+      }
+
+      // Step 4: Insert student at their saved position
+      const { error: insertError } = await supabase
+        .from('kitchen_queue')
+        .insert({
+          profile_id: activatedStudentId,
+          queue_position: insertPosition,
+          joined_at: new Date().toISOString(),
+        });
+
+      if (insertError) throw insertError;
+
+      // Step 5: Clear the saved position (it's been used)
+      const { error: clearError } = await supabase
+        .from('profiles')
+        .update({ last_queue_position: null })
+        .eq('id', activatedStudentId);
+
+      if (clearError) throw clearError;
+
+      console.log('Queue restoration completed successfully');
+      
+      toast({
+        title: "Queue Restored",
+        description: `${profile.full_name} has been restored to position ${insertPosition} in the queue.`,
+      });
+
+    } catch (error) {
+      console.error('Error in queue restoration:', error);
+      // Don't throw - status update already succeeded
+      toast({
+        title: "Warning",
+        description: "Student activated but queue restoration may have failed. You can manually add them to the queue.",
+        variant: "default",
+      });
+    }
+  };
+
   const confirmStatusChange = async () => {
     if (!confirmDialog.studentId) return;
 
@@ -270,6 +393,11 @@ const StudentManagement = () => {
       // If deactivating a student who is in the queue, handle backfill
       if (newStatus === 'inactive' && student?.in_queue) {
         await handleQueueBackfill(confirmDialog.studentId);
+      }
+
+      // If activating a student, try to restore their queue position
+      if (newStatus === 'active') {
+        await handleQueueRestoration(confirmDialog.studentId);
       }
 
       toast({
@@ -436,6 +564,11 @@ const StudentManagement = () => {
                                 In Queue (#{student.queue_position})
                               </Badge>
                             )}
+                            {student.status === 'inactive' && student.last_queue_position && (
+                              <Badge variant="secondary" className="border-purple-500 text-purple-500">
+                                Saved Position: #{student.last_queue_position}
+                              </Badge>
+                            )}
                             {!student.can_change_status && (
                               <Badge variant="secondary">
                                 Not Eligible
@@ -527,21 +660,34 @@ const StudentManagement = () => {
                     Inactive students will not appear in the "Available Students" list for adding to the queue.
                   </p>
                 </>
-              ) : (
-                <>
-                  <p>
-                    You are about to activate <strong>{confirmDialog.studentName}</strong>.
-                  </p>
-                  {confirmDialog.inTodayTeam && (
-                    <p className="mt-2 text-green-600 font-semibold">
-                      Note: This student is in today's kitchen team.
+              ) : (() => {
+                const student = students.find(s => s.id === confirmDialog.studentId);
+                const hasSavedPosition = student?.last_queue_position;
+                
+                return (
+                  <>
+                    <p className="mb-2">
+                      Are you sure you want to activate <strong>{confirmDialog.studentName}</strong>?
                     </p>
-                  )}
-                  <p className="mt-2">
-                    Active students can be added to the kitchen duty queue.
-                  </p>
-                </>
-              )}
+                    {hasSavedPosition && (
+                      <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-2">
+                        <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm">
+                          <p className="font-medium text-blue-500">Queue Position Restoration</p>
+                          <p className="text-muted-foreground mt-1">
+                            This student will be restored to position #{hasSavedPosition} in the queue.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {!hasSavedPosition && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        This student will be activated but not automatically added to the queue.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
