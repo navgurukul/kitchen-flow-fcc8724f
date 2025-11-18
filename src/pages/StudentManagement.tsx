@@ -79,19 +79,10 @@ const StudentManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch all students with roles
+      // Fetch all students with roles from the view
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id, 
-          full_name, 
-          email, 
-          status, 
-          created_at, 
-          last_queue_position,
-          user_id,
-          user_roles!inner(role)
-        `)
+        .from('profiles_with_roles')
+        .select('id, full_name, email, status, created_at, last_queue_position, user_id, role')
         .order('full_name');
 
       if (profilesError) throw profilesError;
@@ -139,7 +130,7 @@ const StudentManagement = () => {
           status: profile.status,
           created_at: profile.created_at,
           user_id: profile.user_id,
-          role: (profile.user_roles as any)[0]?.role || 'student',
+          role: profile.role,
           in_queue: inQueue,
           queue_position: queueData?.find(q => q.profile_id === profile.id)?.queue_position,
           in_today_team: inTodayTeam,
