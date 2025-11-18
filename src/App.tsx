@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import QueueManagement from "./pages/QueueManagement";
+import StudentManagement from "./pages/StudentManagement";
 import SkipRequests from "./pages/SkipRequests";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/queue-management" element={<QueueManagement />} />
+            <Route path="/student-management" element={<StudentManagement />} />
             <Route path="/skip-requests" element={<SkipRequests />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

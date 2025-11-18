@@ -412,6 +412,14 @@ const Dashboard = () => {
                   <Button 
                     className="w-full clay-button" 
                     variant="outline"
+                    onClick={() => navigate('/student-management')}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Manage Students
+                  </Button>
+                  <Button 
+                    className="w-full clay-button" 
+                    variant="outline"
                     onClick={() => navigate('/skip-requests')}
                   >
                     Skip Requests
@@ -482,6 +490,9 @@ const Dashboard = () => {
             <CardContent className="space-y-2">
               <Button className="w-full" variant="outline" onClick={() => navigate('/queue-management')}>
                 Full Queue Management
+              </Button>
+              <Button className="w-full" variant="outline" onClick={() => navigate('/student-management')}>
+                Student Management
               </Button>
               <Button className="w-full" variant="outline" onClick={() => navigate('/skip-requests')}>
                 Manage Skip Requests
