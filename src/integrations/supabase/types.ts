@@ -4,422 +4,431 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
+    PostgrestVersion: "13.0.5";
+  };
   public: {
     Tables: {
       kitchen_assignments: {
         Row: {
-          assignment_date: string
-          created_at: string
-          id: string
-          profile_ids: string[]
-          team_type: string
-        }
+          assignment_date: string;
+          created_at: string;
+          id: string;
+          profile_ids: string[];
+          team_type: string;
+        };
         Insert: {
-          assignment_date: string
-          created_at?: string
-          id?: string
-          profile_ids: string[]
-          team_type: string
-        }
+          assignment_date: string;
+          created_at?: string;
+          id?: string;
+          profile_ids: string[];
+          team_type: string;
+        };
         Update: {
-          assignment_date?: string
-          created_at?: string
-          id?: string
-          profile_ids?: string[]
-          team_type?: string
-        }
-        Relationships: []
-      }
+          assignment_date?: string;
+          created_at?: string;
+          id?: string;
+          profile_ids?: string[];
+          team_type?: string;
+        };
+        Relationships: [];
+      };
       kitchen_queue: {
         Row: {
-          created_at: string
-          id: string
-          joined_at: string
-          last_duty_date: string | null
-          profile_id: string
-          queue_position: number
-          updated_at: string
-        }
+          created_at: string;
+          id: string;
+          joined_at: string;
+          last_duty_date: string | null;
+          profile_id: string;
+          queue_position: number;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          joined_at?: string
-          last_duty_date?: string | null
-          profile_id: string
-          queue_position: number
-          updated_at?: string
-        }
+          created_at?: string;
+          id?: string;
+          joined_at?: string;
+          last_duty_date?: string | null;
+          profile_id: string;
+          queue_position: number;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          joined_at?: string
-          last_duty_date?: string | null
-          profile_id?: string
-          queue_position?: number
-          updated_at?: string
-        }
+          created_at?: string;
+          id?: string;
+          joined_at?: string;
+          last_duty_date?: string | null;
+          profile_id?: string;
+          queue_position?: number;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "kitchen_queue_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            foreignKeyName: "kitchen_queue_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "kitchen_queue_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+            foreignKeyName: "kitchen_queue_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles_with_roles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       profiles: {
         Row: {
-          created_at: string
-          email: string
-          full_name: string
-          id: string
-          last_queue_position: number | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
+          created_at: string;
+          email: string;
+          full_name: string;
+          id: string;
+          last_queue_position: number | null;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          email: string
-          full_name: string
-          id?: string
-          last_queue_position?: number | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
+          created_at?: string;
+          email: string;
+          full_name: string;
+          id?: string;
+          last_queue_position?: number | null;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          email?: string
-          full_name?: string
-          id?: string
-          last_queue_position?: number | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          email?: string;
+          full_name?: string;
+          id?: string;
+          last_queue_position?: number | null;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       queue_history: {
         Row: {
-          created_at: string
-          id: string
-          new_queue: Json
-          previous_queue: Json
-          rotation_date: string
-        }
+          created_at: string;
+          id: string;
+          new_queue: Json;
+          previous_queue: Json;
+          rotation_date: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          new_queue: Json
-          previous_queue: Json
-          rotation_date: string
-        }
+          created_at?: string;
+          id?: string;
+          new_queue: Json;
+          previous_queue: Json;
+          rotation_date: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          new_queue?: Json
-          previous_queue?: Json
-          rotation_date?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          new_queue?: Json;
+          previous_queue?: Json;
+          rotation_date?: string;
+        };
+        Relationships: [];
+      };
       rotation_settings: {
         Row: {
-          created_at: string
-          id: string
-          is_paused: boolean
-          paused_at: string | null
-          paused_by: string | null
-          paused_reason: string | null
-          paused_until: string | null
-          updated_at: string
-        }
+          created_at: string;
+          id: string;
+          is_paused: boolean;
+          paused_at: string | null;
+          paused_by: string | null;
+          paused_reason: string | null;
+          paused_until: string | null;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          is_paused?: boolean
-          paused_at?: string | null
-          paused_by?: string | null
-          paused_reason?: string | null
-          paused_until?: string | null
-          updated_at?: string
-        }
+          created_at?: string;
+          id?: string;
+          is_paused?: boolean;
+          paused_at?: string | null;
+          paused_by?: string | null;
+          paused_reason?: string | null;
+          paused_until?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          is_paused?: boolean
-          paused_at?: string | null
-          paused_by?: string | null
-          paused_reason?: string | null
-          paused_until?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          is_paused?: boolean;
+          paused_at?: string | null;
+          paused_by?: string | null;
+          paused_reason?: string | null;
+          paused_until?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       skip_requests: {
         Row: {
-          created_at: string
-          id: string
-          profile_id: string
-          queue_position_at_request: number
-          reason: string
-          requested_at: string
-          review_notes: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          updated_at: string
-        }
+          created_at: string;
+          id: string;
+          profile_id: string;
+          queue_position_at_request: number;
+          reason: string;
+          requested_at: string;
+          review_notes: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          profile_id: string
-          queue_position_at_request: number
-          reason: string
-          requested_at?: string
-          review_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          id?: string;
+          profile_id: string;
+          queue_position_at_request: number;
+          reason: string;
+          requested_at?: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          profile_id?: string
-          queue_position_at_request?: number
-          reason?: string
-          requested_at?: string
-          review_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          id?: string;
+          profile_id?: string;
+          queue_position_at_request?: number;
+          reason?: string;
+          requested_at?: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "skip_requests_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            foreignKeyName: "skip_requests_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "skip_requests_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_roles"
-            referencedColumns: ["id"]
+            foreignKeyName: "skip_requests_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles_with_roles";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "skip_requests_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            foreignKeyName: "skip_requests_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "skip_requests_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+            foreignKeyName: "skip_requests_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles_with_roles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       user_roles: {
         Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-    }
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
       profiles_with_roles: {
         Row: {
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string | null
-          last_queue_position: number | null
-          role: Database["public"]["Enums"]["app_role"] | null
-          status: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
-    }
+          created_at: string | null;
+          email: string | null;
+          full_name: string | null;
+          id: string | null;
+          last_queue_position: number | null;
+          role: Database["public"]["Enums"]["app_role"] | null;
+          status: string | null;
+          updated_at: string | null;
+          user_id: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
+      delete_student_completely: {
+        Args: {
+          student_profile_id: string;
+        };
+        Returns: undefined;
+      };
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+          _role: Database["public"]["Enums"]["app_role"];
+          _user_id: string;
+        };
+        Returns: boolean;
+      };
       update_queue_positions_batch: {
-        Args: { position_updates: Json }
-        Returns: undefined
-      }
-    }
+        Args: { position_updates: Json };
+        Returns: undefined;
+      };
+    };
     Enums: {
-      app_role: "coordinator" | "student"
-    }
+      app_role: "coordinator" | "student";
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<
+  keyof Database,
+  "public"
+>];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never = never
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
+      DefaultSchema["Views"])
+  ? (DefaultSchema["Tables"] &
+      DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+      Row: infer R;
+    }
+    ? R
     : never
+  : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never = never
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+      Insert: infer I;
+    }
+    ? I
     : never
+  : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never = never
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+      Update: infer U;
+    }
+    ? U
     : never
+  : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never = never
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never = never
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never;
 
 export const Constants = {
   public: {
@@ -427,4 +436,4 @@ export const Constants = {
       app_role: ["coordinator", "student"],
     },
   },
-} as const
+} as const;

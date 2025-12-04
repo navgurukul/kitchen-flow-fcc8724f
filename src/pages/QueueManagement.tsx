@@ -8,8 +8,22 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,14 +51,15 @@ interface QueueItemProps {
   index: number;
 }
 
-
 const QueueItem = ({ item, index }: QueueItemProps) => {
   return (
     <div
       className={`flex items-center justify-between p-4 rounded-lg border ${
-        index < 5 ? 'bg-primary/10 border-primary/20' : 
-        index < 10 ? 'bg-secondary/10 border-secondary/20' : 
-        'bg-background'
+        index < 5
+          ? "bg-primary/10 border-primary/20"
+          : index < 10
+          ? "bg-secondary/10 border-secondary/20"
+          : "bg-background"
       }`}
     >
       <div className="flex items-center gap-4">
@@ -53,12 +68,14 @@ const QueueItem = ({ item, index }: QueueItemProps) => {
         </div>
         <div>
           <p className="font-medium">{item.profiles?.full_name}</p>
-          <p className="text-sm text-muted-foreground">{item.profiles?.email}</p>
+          <p className="text-sm text-muted-foreground">
+            {item.profiles?.email}
+          </p>
         </div>
       </div>
       <div className="flex items-center gap-2">
         {/* Status badges removed from here */}
-        
+
         {index < 5 && <Badge variant="outline">Tomorrow's Team</Badge>}
       </div>
     </div>
@@ -76,11 +93,13 @@ const QueueManagement = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string>("");
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
+    new Set()
+  );
 
   useEffect(() => {
-    if (role !== 'coordinator') {
-      navigate('/dashboard');
+    if (role !== "coordinator") {
+      navigate("/dashboard");
       return;
     }
     fetchQueue();
@@ -91,8 +110,9 @@ const QueueManagement = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('kitchen_queue')
-        .select(`
+        .from("kitchen_queue")
+        .select(
+          `
           id,
           queue_position,
           profiles:profile_id (
@@ -101,17 +121,18 @@ const QueueManagement = () => {
             status,
             email
           )
-        `)
-        .order('queue_position', { ascending: true });
+        `
+        )
+        .order("queue_position", { ascending: true });
 
       if (error) throw error;
       setQueue(data || []);
     } catch (error) {
-      console.error('Error fetching queue:', error);
+      console.error("Error fetching queue:", error);
       toast({
         title: "Error",
         description: "Failed to load queue",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -120,26 +141,31 @@ const QueueManagement = () => {
 
   const fetchAvailableStudents = async () => {
     try {
+      // Fetch active profiles excluding coordinators (coordinators should never be in kitchen queue)
       const { data: allProfiles, error: profilesError } = await supabase
-        .from('profiles_with_roles')
-        .select('id, full_name, email, status')
-        .eq('status', 'active')
-        .neq('role', 'coordinator');
+        .from("profiles_with_roles")
+        .select("id, full_name, email, status")
+        .eq("status", "active")
+        .neq("role", "coordinator");
 
       if (profilesError) throw profilesError;
 
       const { data: queueData, error: queueError } = await supabase
-        .from('kitchen_queue')
-        .select('profile_id');
+        .from("kitchen_queue")
+        .select("profile_id");
 
       if (queueError) throw queueError;
 
-      const queueProfileIds = new Set(queueData?.map(q => q.profile_id) || []);
-      const available = (allProfiles || []).filter(p => !queueProfileIds.has(p.id));
-      
+      const queueProfileIds = new Set(
+        queueData?.map((q) => q.profile_id) || []
+      );
+      const available = (allProfiles || []).filter(
+        (p) => !queueProfileIds.has(p.id)
+      );
+
       setAvailableStudents(available);
     } catch (error) {
-      console.error('Error fetching available students:', error);
+      console.error("Error fetching available students:", error);
     }
   };
 
@@ -149,28 +175,26 @@ const QueueManagement = () => {
     try {
       // Query database for the actual max position
       const { data: maxData, error: maxError } = await supabase
-        .from('kitchen_queue')
-        .select('queue_position')
-        .order('queue_position', { ascending: false })
+        .from("kitchen_queue")
+        .select("queue_position")
+        .order("queue_position", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (maxError) throw maxError;
-      
+
       const maxPosition = maxData?.queue_position || 0;
-      
-      const { error } = await supabase
-        .from('kitchen_queue')
-        .insert({
-          profile_id: selectedStudent,
-          queue_position: maxPosition + 1
-        });
+
+      const { error } = await supabase.from("kitchen_queue").insert({
+        profile_id: selectedStudent,
+        queue_position: maxPosition + 1,
+      });
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Student added to queue"
+        description: "Student added to queue",
       });
 
       setAddDialogOpen(false);
@@ -178,11 +202,11 @@ const QueueManagement = () => {
       fetchQueue();
       fetchAvailableStudents();
     } catch (error) {
-      console.error('Error adding student:', error);
+      console.error("Error adding student:", error);
       toast({
         title: "Error",
         description: "Failed to add student to queue",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -193,30 +217,32 @@ const QueueManagement = () => {
     try {
       // Query database for the actual max position
       const { data: maxData, error: maxError } = await supabase
-        .from('kitchen_queue')
-        .select('queue_position')
-        .order('queue_position', { ascending: false })
+        .from("kitchen_queue")
+        .select("queue_position")
+        .order("queue_position", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (maxError) throw maxError;
-      
+
       const maxPosition = maxData?.queue_position || 0;
 
-      const studentsToAdd = Array.from(selectedStudents).map((profileId, index) => ({
-        profile_id: profileId,
-        queue_position: maxPosition + index + 1
-      }));
+      const studentsToAdd = Array.from(selectedStudents).map(
+        (profileId, index) => ({
+          profile_id: profileId,
+          queue_position: maxPosition + index + 1,
+        })
+      );
 
       const { error } = await supabase
-        .from('kitchen_queue')
+        .from("kitchen_queue")
         .insert(studentsToAdd);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `Added ${selectedStudents.size} students to queue`
+        description: `Added ${selectedStudents.size} students to queue`,
       });
 
       setBulkDialogOpen(false);
@@ -224,17 +250,17 @@ const QueueManagement = () => {
       fetchQueue();
       fetchAvailableStudents();
     } catch (error) {
-      console.error('Error initializing queue:', error);
+      console.error("Error initializing queue:", error);
       toast({
         title: "Error",
         description: "Failed to initialize queue",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const toggleStudentSelection = (studentId: string) => {
-    setSelectedStudents(prev => {
+    setSelectedStudents((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(studentId)) {
         newSet.delete(studentId);
@@ -245,9 +271,12 @@ const QueueManagement = () => {
     });
   };
 
-  const filteredQueue = queue.filter(item =>
-    item.profiles?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.profiles?.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredQueue = queue.filter(
+    (item) =>
+      item.profiles?.full_name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      item.profiles?.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -259,35 +288,43 @@ const QueueManagement = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate("/dashboard")}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Queue Management</h1>
-              <p className="text-muted-foreground">Manage the kitchen duty rotation queue</p>
+              <h1 className="text-3xl font-bold text-foreground">
+                Queue Management
+              </h1>
+              <p className="text-muted-foreground">
+                Manage the kitchen duty rotation queue
+              </p>
             </div>
           </div>
           {/* <Button onClick={signOut} variant="outline">
           Sign Out
         </Button> */}
-      </div>
+        </div>
 
-      {/* Automated Rotation Notice */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-3">
-            <Clock className="h-5 w-5 text-primary" />
-            <div>
-              <p className="font-medium text-foreground">Automated Queue Rotation</p>
-              <p className="text-sm text-muted-foreground">Queue automatically rotates at midnight (00:00 IST) every day</p>
+        {/* Automated Rotation Notice */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium text-foreground">
+                  Automated Queue Rotation
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Queue automatically rotates at midnight (00:00 IST) every day
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Controls */}
-      <Card>
+        {/* Controls */}
+        <Card>
           <CardHeader>
             <CardTitle>Queue Controls</CardTitle>
           </CardHeader>
@@ -311,17 +348,23 @@ const QueueManagement = () => {
                   <DialogHeader>
                     <DialogTitle>Bulk Initialize Queue</DialogTitle>
                     <DialogDescription>
-                      Select all students to add to the queue. They will be added in the order shown.
+                      Select all students to add to the queue. They will be
+                      added in the order shown.
                     </DialogDescription>
                   </DialogHeader>
                   <ScrollArea className="h-[400px] pr-4">
                     <div className="space-y-2">
                       {availableStudents.map((student) => (
-                        <div key={student.id} className="flex items-center space-x-2 p-3 rounded-lg hover:bg-accent">
+                        <div
+                          key={student.id}
+                          className="flex items-center space-x-2 p-3 rounded-lg hover:bg-accent"
+                        >
                           <Checkbox
                             id={student.id}
                             checked={selectedStudents.has(student.id)}
-                            onCheckedChange={() => toggleStudentSelection(student.id)}
+                            onCheckedChange={() =>
+                              toggleStudentSelection(student.id)
+                            }
                           />
                           <label
                             htmlFor={student.id}
@@ -329,7 +372,9 @@ const QueueManagement = () => {
                           >
                             <div>
                               <p>{student.full_name}</p>
-                              <p className="text-muted-foreground text-xs">{student.email}</p>
+                              <p className="text-muted-foreground text-xs">
+                                {student.email}
+                              </p>
                             </div>
                           </label>
                         </div>
@@ -337,14 +382,17 @@ const QueueManagement = () => {
                     </div>
                   </ScrollArea>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => {
-                      setBulkDialogOpen(false);
-                      setSelectedStudents(new Set());
-                    }}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setBulkDialogOpen(false);
+                        setSelectedStudents(new Set());
+                      }}
+                    >
                       Cancel
                     </Button>
-                    <Button 
-                      onClick={handleBulkInitialize} 
+                    <Button
+                      onClick={handleBulkInitialize}
                       disabled={selectedStudents.size === 0}
                     >
                       Add {selectedStudents.size} Students
@@ -362,22 +410,20 @@ const QueueManagement = () => {
             <CardTitle>Current Queue ({queue.length} students)</CardTitle>
           </CardHeader>
           <CardContent>
-          {loading ? (
-            <p className="text-muted-foreground">Loading queue...</p>
-          ) : filteredQueue.length > 0 ? (
-            <div className="space-y-2">
-              {filteredQueue.map((item, index) => (
-                <QueueItem
-                  key={item.id}
-                  item={item}
-                  index={index}
-                />
-              ))}
-            </div>
-          ) : (
+            {loading ? (
+              <p className="text-muted-foreground">Loading queue...</p>
+            ) : filteredQueue.length > 0 ? (
+              <div className="space-y-2">
+                {filteredQueue.map((item, index) => (
+                  <QueueItem key={item.id} item={item} index={index} />
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <p>No students in queue</p>
-                <p className="text-sm">Use "Add Student" or "Bulk Initialize" to get started</p>
+                <p className="text-sm">
+                  Use "Add Student" or "Bulk Initialize" to get started
+                </p>
               </div>
             )}
           </CardContent>

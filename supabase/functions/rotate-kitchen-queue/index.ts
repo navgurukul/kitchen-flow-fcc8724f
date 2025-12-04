@@ -1,30 +1,33 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+/// <reference path="../global.d.ts" />
+// @ts-ignore: ESM import from URL
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Starting kitchen queue rotation check...');
+    console.log("Starting kitchen queue rotation check...");
 
     // CHECK IF ROTATION IS PAUSED
     const { data: settings, error: settingsError } = await supabase
-      .from('rotation_settings')
-      .select('*')
+      .from("rotation_settings")
+      .select("*")
       .single();
 
     if (settingsError) {
-      console.error('Error fetching rotation settings:', settingsError);
+      console.error("Error fetching rotation settings:", settingsError);
       // Continue with rotation if error (fail-safe)
     }
 
@@ -32,83 +35,92 @@ Deno.serve(async (req) => {
     if (settings?.is_paused && settings?.paused_until) {
       const now = new Date();
       const pausedUntil = new Date(settings.paused_until);
-      
+
       if (now >= pausedUntil) {
-        console.log('Auto-resuming rotation. 24-hour pause period expired.');
+        console.log("Auto-resuming rotation. 24-hour pause period expired.");
         await supabase
-          .from('rotation_settings')
-          .update({ 
+          .from("rotation_settings")
+          .update({
             is_paused: false,
-            paused_until: null
+            paused_until: null,
           })
-          .eq('id', settings.id);
-        
-        console.log('Rotation auto-resumed successfully. Proceeding with queue rotation...');
+          .eq("id", settings.id);
+
+        console.log(
+          "Rotation auto-resumed successfully. Proceeding with queue rotation..."
+        );
       } else {
         // Still paused
-        const hoursLeft = Math.ceil((pausedUntil.getTime() - now.getTime()) / (1000 * 60 * 60));
+        const hoursLeft = Math.ceil(
+          (pausedUntil.getTime() - now.getTime()) / (1000 * 60 * 60)
+        );
         console.log(`Rotation is paused. Auto-resume in ${hoursLeft} hours.`);
-        console.log(`Reason: ${settings.paused_reason || 'No reason provided'}`);
-        
+        console.log(
+          `Reason: ${settings.paused_reason || "No reason provided"}`
+        );
+
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             success: false,
             message: `Rotation paused for ${hoursLeft} more hours`,
             paused_until: settings.paused_until,
-            paused_reason: settings.paused_reason
+            paused_reason: settings.paused_reason,
           }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
       }
     } else if (settings?.is_paused) {
       // Paused but no end time set (shouldn't happen, but handle gracefully)
-      console.log('Rotation is paused indefinitely.');
+      console.log("Rotation is paused indefinitely.");
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: false,
-          message: 'Rotation is currently paused'
+          message: "Rotation is currently paused",
         }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    console.log('Rotation is active. Proceeding with queue rotation...');
+    console.log("Rotation is active. Proceeding with queue rotation...");
 
     // CRITICAL: Before rotating, handle pending skip requests
     const { data: pendingRequests } = await supabase
-      .from('skip_requests')
-      .select('id')
-      .eq('status', 'pending');
+      .from("skip_requests")
+      .select("id")
+      .eq("status", "pending");
 
     if (pendingRequests && pendingRequests.length > 0) {
-      console.log(`Auto-rejecting ${pendingRequests.length} pending skip requests due to rotation`);
-      
+      console.log(
+        `Auto-rejecting ${pendingRequests.length} pending skip requests due to rotation`
+      );
+
       // Mark all pending requests as expired/rejected
       const { error: rejectError } = await supabase
-        .from('skip_requests')
-        .update({ 
-          status: 'rejected',
-          review_notes: 'Expired - queue was rotated',
-          reviewed_at: new Date().toISOString()
+        .from("skip_requests")
+        .update({
+          status: "rejected",
+          review_notes: "Expired - queue was rotated",
+          reviewed_at: new Date().toISOString(),
         })
-        .eq('status', 'pending');
+        .eq("status", "pending");
 
       if (rejectError) {
-        console.error('Error rejecting pending requests:', rejectError);
+        console.error("Error rejecting pending requests:", rejectError);
         // Continue with rotation anyway
       }
     }
 
     // Get current queue ordered by position
     const { data: currentQueue, error: queueError } = await supabase
-      .from('kitchen_queue')
-      .select(`
+      .from("kitchen_queue")
+      .select(
+        `
         *,
         profiles:profile_id (
           id,
@@ -116,39 +128,66 @@ Deno.serve(async (req) => {
           status,
           user_id
         )
-      `)
-      .order('queue_position', { ascending: true });
+      `
+      )
+      .order("queue_position", { ascending: true });
 
     if (queueError) {
-      console.error('Error fetching queue:', queueError);
+      console.error("Error fetching queue:", queueError);
       throw queueError;
     }
 
     if (!currentQueue || currentQueue.length < 10) {
-      console.log('Not enough students in queue (need at least 10)');
+      console.log("Not enough students in queue (need at least 10)");
       return new Response(
-        JSON.stringify({ error: 'Not enough students in queue' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Not enough students in queue" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    // Filter active students only
+    // Get role information for all profiles in queue to filter out coordinators
+    const userIds = currentQueue
+      .map((item: any) => item.profiles?.user_id)
+      .filter(Boolean);
+
+    const { data: rolesData } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .in("user_id", userIds);
+
+    const coordinatorUserIds = new Set(
+      rolesData
+        ?.filter((r: any) => r.role === "coordinator")
+        .map((r: any) => r.user_id) || []
+    );
+
+    // Filter active students only AND exclude coordinators
     const activeQueue = currentQueue.filter(
-      (item: any) => item.profiles?.status === 'active'
+      (item: any) =>
+        item.profiles?.status === "active" &&
+        !coordinatorUserIds.has(item.profiles?.user_id)
     );
 
     if (activeQueue.length < 10) {
-      console.log('Not enough active students (need at least 10)');
+      console.log("Not enough active students (need at least 10)");
       return new Response(
-        JSON.stringify({ error: 'Not enough active students' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Not enough active students" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     // Get today's date in IST timezone (UTC+5:30)
     const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
-    const today = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + IST_OFFSET + 86400000).toISOString().split('T')[0];
+    const today = new Date(Date.now() + IST_OFFSET).toISOString().split("T")[0];
+    const tomorrow = new Date(Date.now() + IST_OFFSET + 86400000)
+      .toISOString()
+      .split("T")[0];
 
     // Take first 5 for today, next 5 for tomorrow
     const todayTeam = activeQueue.slice(0, 5);
@@ -156,79 +195,89 @@ Deno.serve(async (req) => {
 
     // Create assignments
     const { error: todayError } = await supabase
-      .from('kitchen_assignments')
-      .upsert({
-        assignment_date: today,
-        team_type: 'today',
-        profile_ids: todayTeam.map((item: any) => item.profiles.id)
-      }, { onConflict: 'assignment_date' });
+      .from("kitchen_assignments")
+      .upsert(
+        {
+          assignment_date: today,
+          team_type: "today",
+          profile_ids: todayTeam.map((item: any) => item.profiles.id),
+        },
+        { onConflict: "assignment_date" }
+      );
 
     if (todayError) {
-      console.error('Error creating today assignment:', todayError);
+      console.error("Error creating today assignment:", todayError);
       throw todayError;
     }
 
     const { error: tomorrowError } = await supabase
-      .from('kitchen_assignments')
-      .upsert({
-        assignment_date: tomorrow,
-        team_type: 'tomorrow',
-        profile_ids: tomorrowTeam.map((item: any) => item.profiles.id)
-      }, { onConflict: 'assignment_date' });
+      .from("kitchen_assignments")
+      .upsert(
+        {
+          assignment_date: tomorrow,
+          team_type: "tomorrow",
+          profile_ids: tomorrowTeam.map((item: any) => item.profiles.id),
+        },
+        { onConflict: "assignment_date" }
+      );
 
     if (tomorrowError) {
-      console.error('Error creating tomorrow assignment:', tomorrowError);
+      console.error("Error creating tomorrow assignment:", tomorrowError);
       throw tomorrowError;
     }
 
     // Save to history
     const { error: historyError } = await supabase
-      .from('queue_history')
+      .from("queue_history")
       .insert({
         rotation_date: today,
         previous_queue: currentQueue,
-        new_queue: currentQueue
+        new_queue: currentQueue,
       });
 
     if (historyError) {
-      console.error('Error saving history:', historyError);
+      console.error("Error saving history:", historyError);
     }
 
     // Rotate queue: move top 5 to bottom
     const rotatedQueue = [...activeQueue.slice(5), ...activeQueue.slice(0, 5)];
-    
+
     // Batch update all positions using database function (efficient and atomic)
     const positionUpdates = rotatedQueue.map((item, index) => ({
       id: item.id,
       queue_position: index + 1,
-      last_duty_date: index < 5 ? today : (item.last_duty_date || 'null')
+      last_duty_date: index < 5 ? today : item.last_duty_date || "null",
     }));
 
-    const { error: updateError } = await supabase.rpc('update_queue_positions_batch', {
-      position_updates: positionUpdates
-    });
+    const { error: updateError } = await supabase.rpc(
+      "update_queue_positions_batch",
+      {
+        position_updates: positionUpdates,
+      }
+    );
 
     if (updateError) {
-      console.error('Error updating queue positions:', updateError);
+      console.error("Error updating queue positions:", updateError);
       throw updateError;
     }
 
-    console.log('Queue rotation completed successfully');
+    console.log("Queue rotation completed successfully");
 
     return new Response(
       JSON.stringify({
         success: true,
         todayTeam: todayTeam.length,
-        tomorrowTeam: tomorrowTeam.length
+        tomorrowTeam: tomorrowTeam.length,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error('Error in rotate-kitchen-queue:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("Error in rotate-kitchen-queue:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
