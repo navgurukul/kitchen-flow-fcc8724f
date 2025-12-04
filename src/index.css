@@ -119,12 +119,11 @@ All colors MUST be HSL.
 
 
 
+/* src/index.css */
 @font-face {
-  /* This name is used in Step 3 */
   font-family: 'Samarkan'; 
-  /* Adjust the path relative to your CSS file */
-  src: url('./assets/fonts/Samarkan-Regular.woff2') format('woff2'),
-       url('./assets/fonts/Samarkan-Regular.ttf') format('truetype');
+  /* Path is relative to index.css */
+  src: url('./assets/fonts/Samarkan-Normal.ttf') format('truetype'); 
   font-weight: normal;
   font-style: normal;
   font-display: swap; 

@@ -864,7 +864,7 @@ const Dashboard = () => {
              
             
               
-              <p className="text-sm  text-muted-foreground font-bold capitalize">
+              <p className="text-sm  text-slate-800 text-muted-foreground font-bold capitalize">
                 {role} Dashboard
               </p>
            
@@ -876,7 +876,7 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">
+          <h2 className="text-3xl text-slate-800  font-bold mb-2">
             Welcome back, {user?.email?.split('@')[0] || 'User'}!
           </h2>
           <p className="text-muted-foreground">
@@ -890,7 +890,7 @@ const Dashboard = () => {
           <Card className="clay-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
+                <Calendar className="h-5 w-5 text-[#e91e63]" />
                 Today's Team
               </CardTitle>
             </CardHeader>
@@ -917,7 +917,7 @@ const Dashboard = () => {
           <Card className="clay-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
+                <Users className="h-5 w-5 text-[#e91e63]" />
                 Tomorrow's Team
               </CardTitle>
             </CardHeader>
@@ -944,7 +944,7 @@ const Dashboard = () => {
           <Card className="clay-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ChefHat className="h-5 w-5 text-primary" />
+                <ChefHat className="h-5 w-5 text-[#e91e63]" />
                 {role === 'student' ? 'My Position' : 'Quick Actions'}
               </CardTitle>
             </CardHeader>
@@ -1005,7 +1005,7 @@ const Dashboard = () => {
               ) : (
                 <>
                   <Button 
-                    className="w-full clay-button" 
+                    className="w-full clay-button text-[#e91e63] border-[#e91e63] bg-white  hover:text-white hover:bg-[#e91e63]" 
                     variant="outline"
                     onClick={() => navigate('/queue-management')}
                   >
@@ -1013,7 +1013,7 @@ const Dashboard = () => {
                     Manage Queue
                   </Button>
                   <Button 
-                    className="w-full clay-button" 
+                    className="w-full clay-button text-[#e91e63] border-[#e91e63] bg-white  hover:text-white hover:bg-[#e91e63]" 
                     variant="outline"
                     onClick={() => navigate('/student-management')}
                   >
@@ -1021,7 +1021,7 @@ const Dashboard = () => {
                     Manage Students
                   </Button>
                   <Button 
-                    className="w-full clay-button" 
+                    className="w-full clay-button text-[#e91e63] border-[#e91e63] bg-white hover:text-white hover:bg-[#e91e63] " 
                     variant="outline"
                     onClick={() => navigate('/skip-requests')}
                   >
@@ -1037,7 +1037,7 @@ const Dashboard = () => {
             <Card className="clay-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" />
+                  <Clock className="w-5 h-5 text-[#e91e63]" />
                   Rotation Control
                 </CardTitle>
               </CardHeader>
@@ -1064,7 +1064,7 @@ const Dashboard = () => {
                     </>
                   ) : (
                     <>
-                      <Badge variant="default" className="mb-2">
+                      <Badge variant="default" className="mb-2  px-10 py-2 text-[#e91e63] border-[#e91e63] bg-white  hover:text-white hover:bg-[#e91e63]">
                         Rotation Active
                       </Badge>
                       <p className="text-sm text-muted-foreground mb-4">
@@ -1073,7 +1073,7 @@ const Dashboard = () => {
                       <Button 
                         variant="outline" 
                         onClick={() => setShowPauseDialog(true)} 
-                        className="w-full"
+                        className="w-1/2 bg-[#e91e63] text-white  hover:bg-white  hover:border-[#e91e63] hover:text-[#e91e63]   "
                       >
                         Pause for 24 Hours
                       </Button>

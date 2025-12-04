@@ -8,8 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
  
 import Layout from  '@/components/Layout'; 
 
-// Pages
-import Index from "./pages/Index";
+ 
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";

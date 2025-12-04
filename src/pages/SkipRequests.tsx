@@ -194,9 +194,9 @@ export default function SkipRequests() {
             <Button
               variant="ghost"
               onClick={() => navigate('/dashboard')}
-              className="mb-2"
+              className="mb-2  hover:bg-[#e91e63] "
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="w-4 h-4 mr-2   "  />
               Back to Dashboard
             </Button>
             <h1 className="text-3xl font-bold text-gray-900">Skip Requests Management</h1>

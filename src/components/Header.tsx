@@ -17,10 +17,12 @@ const Header = () => {
       className="flex items-center justify-between px-8 py-4 bg-[#FFE4E1] shadow-md 
                  fixed top-0 w-full z-10"
     >
-      <div className="flex items-center gap-2">
-        <ChefHat className="w-8 h-8 text-[#E91E63]" />
-        <span className="text-2xl font-bold text-[#E91E63]">KitchenFlow</span>
-      </div>
+      <Link to="#hero-section" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+        <div className="flex items-center gap-2 cursor-pointer">
+            <ChefHat className="w-8 h-8 text-[#E91E63]" />
+            <span className="text-2xl font-bold text-[#E91E63]">KitchenFlow</span>
+        </div>
+    </Link>
       
 
     

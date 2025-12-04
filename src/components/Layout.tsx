@@ -2,7 +2,7 @@
 
 import { Outlet } from 'react-router-dom'; // 👈 Import Outlet
 import Header from "./Header";
-import Footer from "./Footer";
+ 
 
 const Layout = () => {
   const HEADER_HEIGHT_PADDING = '72px'; 
@@ -18,7 +18,7 @@ const Layout = () => {
         <Outlet /> {/* 👈 Render the current nested page component here */}
       </main>
       
-      <Footer />
+      
     </div>
   );
 };

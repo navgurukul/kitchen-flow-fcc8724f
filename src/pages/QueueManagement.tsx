@@ -290,7 +290,7 @@ const QueueManagement = () => {
               size="icon"
               onClick={() => navigate("/dashboard")}
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5 text-[#e91e63]" />
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-foreground">
@@ -307,10 +307,10 @@ const QueueManagement = () => {
         </div>
 
         {/* Automated Rotation Notice */}
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="border-pink-300 bg-rose-100">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-primary" />
+              <Clock className="h-5 w-5 text-[#e91e63] " />
               <div>
                 <p className="font-medium text-foreground">
                   Automated Queue Rotation
@@ -334,13 +334,13 @@ const QueueManagement = () => {
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 min-w-[200px]"
+                className="flex-1 min-w-[200px] "
               />
 
               <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Users className="h-4 w-4 mr-2" />
+                  <Button variant="outline" className="hover:bg-[#e91e63] hover:text-white border-[#e91e63]">
+                    <Users className="h-4 w-4 mr-2  " />
                     Add New Students
                   </Button>
                 </DialogTrigger>
@@ -411,7 +411,7 @@ const QueueManagement = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-muted-foreground">Loading queue...</p>
+              <p className="text-muted-foreground ">Loading queue...</p>
             ) : filteredQueue.length > 0 ? (
               <div className="space-y-2">
                 {filteredQueue.map((item, index) => (
@@ -419,7 +419,7 @@ const QueueManagement = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8  text-muted-foreground">
                 <p>No students in queue</p>
                 <p className="text-sm">
                   Use "Add Student" or "Bulk Initialize" to get started
