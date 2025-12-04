@@ -116,3 +116,16 @@ All colors MUST be HSL.
     background: var(--gradient-subtle);
   }
 }
+
+
+
+@font-face {
+  /* This name is used in Step 3 */
+  font-family: 'Samarkan'; 
+  /* Adjust the path relative to your CSS file */
+  src: url('./assets/fonts/Samarkan-Regular.woff2') format('woff2'),
+       url('./assets/fonts/Samarkan-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; 
+}

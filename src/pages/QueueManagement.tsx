@@ -37,6 +37,7 @@ interface QueueItemProps {
   index: number;
 }
 
+
 const QueueItem = ({ item, index }: QueueItemProps) => {
   return (
     <div
@@ -56,16 +57,9 @@ const QueueItem = ({ item, index }: QueueItemProps) => {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Badge variant={item.profiles?.status === 'active' ? 'default' : 'secondary'}>
-          {item.profiles?.status}
-        </Badge>
-        {item.profiles?.status === 'inactive' && (
-          <Badge variant="outline" className="text-yellow-500 border-yellow-500/20 bg-yellow-500/10">
-            ⚠️ Inactive
-          </Badge>
-        )}
-        {index < 5 && <Badge variant="outline">Today's Team</Badge>}
-        {index >= 5 && index < 10 && <Badge variant="outline">Tomorrow's Team</Badge>}
+        {/* Status badges removed from here */}
+        
+        {index < 5 && <Badge variant="outline">Tomorrow's Team</Badge>}
       </div>
     </div>
   );
@@ -127,9 +121,10 @@ const QueueManagement = () => {
   const fetchAvailableStudents = async () => {
     try {
       const { data: allProfiles, error: profilesError } = await supabase
-        .from('profiles')
+        .from('profiles_with_roles')
         .select('id, full_name, email, status')
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .neq('role', 'coordinator');
 
       if (profilesError) throw profilesError;
 
@@ -273,9 +268,9 @@ const QueueManagement = () => {
               <p className="text-muted-foreground">Manage the kitchen duty rotation queue</p>
             </div>
           </div>
-          <Button onClick={signOut} variant="outline">
+          {/* <Button onClick={signOut} variant="outline">
           Sign Out
-        </Button>
+        </Button> */}
       </div>
 
       {/* Automated Rotation Notice */}
@@ -304,53 +299,12 @@ const QueueManagement = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1 min-w-[200px]"
               />
-              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Student
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Student to Queue</DialogTitle>
-                    <DialogDescription>
-                      Select a student to add to the kitchen queue
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Student</Label>
-                      <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a student" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableStudents.map((student) => (
-                            <SelectItem key={student.id} value={student.id}>
-                              {student.full_name} ({student.email})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddStudent} disabled={!selectedStudent}>
-                      Add to Queue
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
 
               <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline">
                     <Users className="h-4 w-4 mr-2" />
-                    Bulk Initialize
+                    Add New Students
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">

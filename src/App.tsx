@@ -4,7 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+
+ 
+import Layout from  '@/components/Layout'; 
+
+// Pages
 import Index from "./pages/Index";
+import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import QueueManagement from "./pages/QueueManagement";
@@ -12,24 +18,33 @@ import StudentManagement from "./pages/StudentManagement";
 import SkipRequests from "./pages/SkipRequests";
 import NotFound from "./pages/NotFound";
 
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        {/* Uncomment Toaster/Sonner when you need them for notifications */}
         <Toaster />
-        <Sonner />
+        <Sonner /> 
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            {/* 1. Routes WITHOUT Layout (e.g., Auth, 404) */}
             <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/queue-management" element={<QueueManagement />} />
-            <Route path="/student-management" element={<StudentManagement />} />
-            <Route path="/skip-requests" element={<SkipRequests />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
+            
+            {/* 2. Routes WITH Layout (All other main pages) */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+             
+              
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/queue-management" element={<QueueManagement />} />
+              <Route path="/student-management" element={<StudentManagement />} />
+              <Route path="/skip-requests" element={<SkipRequests />} />
+            </Route>
+
           </Routes>
         </BrowserRouter>
       </AuthProvider>

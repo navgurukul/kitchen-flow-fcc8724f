@@ -55,6 +55,11 @@ export default function SkipRequests() {
   const fetchRequests = async () => {
     try {
       setLoading(true);
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const dateString = thirtyDaysAgo.toISOString();
+
       const { data, error } = await supabase
         .from('skip_requests')
         .select(`
@@ -64,6 +69,7 @@ export default function SkipRequests() {
             email
           )
         `)
+        .gt('requested_at', dateString)
         .order('requested_at', { ascending: false });
 
       if (error) throw error;

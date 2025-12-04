@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-
+import defaultTheme from 'tailwindcss/defaultTheme';
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+     fontFamily: {
+        // Corrected line: Use defaultTheme.fontFamily.sans as fallback
+        'samarkan': ['Samarkan', ...defaultTheme.fontFamily.sans],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
