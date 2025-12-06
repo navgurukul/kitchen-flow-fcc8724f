@@ -164,7 +164,54 @@ Deno.serve(async (req) => {
         .map((r: any) => r.user_id) || []
     );
 
-    // Filter active students only AND exclude coordinators
+    // CRITICAL: Remove any coordinators from the queue before rotation
+    // This handles the case where someone was promoted to coordinator after being added to the queue
+    const coordinatorQueueIds = currentQueue
+      .filter((item: any) => coordinatorUserIds.has(item.profiles?.user_id))
+      .map((item: any) => item.id);
+
+    if (coordinatorQueueIds.length > 0) {
+      console.log(
+        `Removing ${coordinatorQueueIds.length} coordinator(s) from queue before rotation`
+      );
+
+      const { error: deleteCoordError } = await supabase
+        .from("kitchen_queue")
+        .delete()
+        .in("id", coordinatorQueueIds);
+
+      if (deleteCoordError) {
+        console.error(
+          "Error removing coordinators from queue:",
+          deleteCoordError
+        );
+        // Continue anyway - we'll filter them out
+      } else {
+        // Refresh the queue after deletion
+        const { data: refreshedQueue, error: refreshError } = await supabase
+          .from("kitchen_queue")
+          .select(
+            `
+            *,
+            profiles:profile_id (
+              id,
+              full_name,
+              status,
+              user_id
+            )
+          `
+          )
+          .order("queue_position", { ascending: true });
+
+        if (!refreshError && refreshedQueue) {
+          // Update currentQueue with refreshed data (reassign using Object.assign for const)
+          currentQueue.length = 0;
+          currentQueue.push(...refreshedQueue);
+        }
+      }
+    }
+
+    // Filter active students only AND exclude coordinators (double-check after deletion)
     const activeQueue = currentQueue.filter(
       (item: any) =>
         item.profiles?.status === "active" &&
@@ -226,27 +273,52 @@ Deno.serve(async (req) => {
       throw tomorrowError;
     }
 
-    // Save to history
+    // Rotate queue: move top 5 active students to bottom
+    // IMPORTANT: We must update ALL queue items to avoid unique constraint violations
+    const rotatedActiveQueue = [
+      ...activeQueue.slice(5),
+      ...activeQueue.slice(0, 5),
+    ];
+
+    // Get inactive/excluded items (those not in activeQueue)
+    // IMPORTANT: Exclude coordinators to prevent trigger errors
+    const activeIds = new Set(activeQueue.map((item: any) => item.id));
+    const inactiveQueue = currentQueue.filter(
+      (item: any) =>
+        !activeIds.has(item.id) &&
+        !coordinatorUserIds.has(item.profiles?.user_id) // Never include coordinators
+    );
+
+    // Combine: rotated active students first, then inactive at the end
+    const fullRotatedQueue = [...rotatedActiveQueue, ...inactiveQueue];
+
+    console.log(
+      `Updating positions for ${fullRotatedQueue.length} items (${rotatedActiveQueue.length} active, ${inactiveQueue.length} inactive/excluded)`
+    );
+
+    // Save to history (after calculating rotated queue)
     const { error: historyError } = await supabase
       .from("queue_history")
       .insert({
         rotation_date: today,
         previous_queue: currentQueue,
-        new_queue: currentQueue,
+        new_queue: fullRotatedQueue,
       });
 
     if (historyError) {
       console.error("Error saving history:", historyError);
     }
 
-    // Rotate queue: move top 5 to bottom
-    const rotatedQueue = [...activeQueue.slice(5), ...activeQueue.slice(0, 5)];
-
     // Batch update all positions using database function (efficient and atomic)
-    const positionUpdates = rotatedQueue.map((item, index) => ({
+    const positionUpdates = fullRotatedQueue.map((item, index) => ({
       id: item.id,
       queue_position: index + 1,
-      last_duty_date: index < 5 ? today : item.last_duty_date || "null",
+      // Only update last_duty_date for items that were at positions 6-10 and are now at 1-5
+      // These are the students who just completed their duty
+      last_duty_date:
+        index < 5 && activeIds.has(item.id)
+          ? today
+          : item.last_duty_date || "null",
     }));
 
     const { error: updateError } = await supabase.rpc(
@@ -273,11 +345,49 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in rotate-kitchen-queue:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+
+    // Better error message extraction for various error types
+    let errorMessage = "Unknown error";
+    let errorDetails: {
+      code: unknown;
+      details: unknown;
+      hint: unknown;
+    } | null = null;
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === "object" && error !== null) {
+      // Handle Supabase/PostgreSQL error objects
+      const errObj = error as Record<string, unknown>;
+      errorMessage =
+        (errObj.message as string) ||
+        (errObj.error as string) ||
+        (errObj.code as string) ||
+        JSON.stringify(error);
+      errorDetails = {
+        code: errObj.code,
+        details: errObj.details,
+        hint: errObj.hint,
+      };
+    } else if (typeof error === "string") {
+      errorMessage = error;
+    }
+
+    console.error("Parsed error message:", errorMessage);
+    if (errorDetails) {
+      console.error("Error details:", errorDetails);
+    }
+
+    return new Response(
+      JSON.stringify({
+        error: errorMessage,
+        details: errorDetails,
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
