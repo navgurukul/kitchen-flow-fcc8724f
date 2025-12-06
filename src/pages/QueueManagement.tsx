@@ -55,9 +55,9 @@ const QueueItem = ({ item, index }: QueueItemProps) => {
   return (
     <div
       className={`flex items-center justify-between p-4 rounded-lg border ${
-        index < 5
+        index < 6
           ? "bg-primary/10 border-primary/20"
-          : index < 10
+          : index < 11
           ? "bg-secondary/10 border-secondary/20"
           : "bg-background"
       }`}
@@ -76,7 +76,14 @@ const QueueItem = ({ item, index }: QueueItemProps) => {
       <div className="flex items-center gap-2">
         {/* Status badges removed from here */}
 
-        {index < 5 && <Badge variant="outline">Tomorrow's Team</Badge>}
+        {index >= 1 && index < 6 && (
+  <Badge variant="outline">Today's Team</Badge>
+)}
+
+{index >= 6 && index < 11 && (
+  <Badge variant="outline">Tomorrow's Team</Badge>
+)}
+
       </div>
     </div>
   );

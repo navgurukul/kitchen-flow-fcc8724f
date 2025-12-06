@@ -83,7 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          // redirectTo: `${window.location.origin}/`,
+          redirectTo: 'https://kitchen-flow.lovable.app/auth/callback',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -147,3 +148,8 @@ export function useAuth() {
   }
   return context;
 }
+
+
+
+
+
