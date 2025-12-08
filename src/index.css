@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+ 
 
 @layer base {
   :root {
@@ -119,11 +117,11 @@ All colors MUST be HSL.
 
 
 
-/* src/index.css */
+
 @font-face {
   font-family: 'Samarkan'; 
-  /* Path is relative to index.css */
-  src: url('./assets/fonts/Samarkan-Normal.ttf') format('truetype'); 
+  
+  src: url('./assets/fonts/Samarkan Normal.ttf') format('truetype'); 
   font-weight: normal;
   font-style: normal;
   font-display: swap; 
