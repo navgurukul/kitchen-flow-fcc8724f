@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
  
 import { ChefHat, LogOut, Calendar, BarChart2, Settings, Bell, CheckCircle, Linkedin, Github, Phone, Facebook, Twitter } from "lucide-react"; 
@@ -89,7 +89,7 @@ const DevContact = ({ name, linkedInUrl, githubUrl, phoneUrl }) => (
                     </h1>
                     
                     <img 
-                        src="/public/AJMF.jpeg" 
+                        src="/AJMF.jpeg" 
                         alt="Navgurukul Torch Logo" 
                         className="h-20 w-auto object-contain"
                     />
@@ -109,9 +109,7 @@ const DevContact = ({ name, linkedInUrl, githubUrl, phoneUrl }) => (
                 
                 <div className="relative flex items-center justify-center gap-3 overflow-hidden px-4">
                   
-                    <div className="hidden md:block absolute left-0 text-3xl text-gray-500 cursor-pointer p-2 bg-white/50 rounded-full z-[5]">
-                        &lt; 
-                    </div>
+                    
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
                         <img src="/cooking1.jpeg" alt="Students assigned turns" className="w-full h-auto rounded-lg shadow-lg object-cover max-h-64" />
@@ -120,9 +118,7 @@ const DevContact = ({ name, linkedInUrl, githubUrl, phoneUrl }) => (
                     </div>
 
                    
-                    <div className="hidden md:block absolute right-0 text-3xl text-gray-500 cursor-pointer p-2 bg-white/50 rounded-full z-[5]">
-                        &gt; 
-                    </div>
+                    
                 </div>
 
              
