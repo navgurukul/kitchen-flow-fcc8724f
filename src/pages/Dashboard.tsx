@@ -348,7 +348,7 @@ const Dashboard = () => {
     <div className="min-h-screen gradient-subtle">
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <p className="text-sm  text-slate-800 text-muted-foreground font-bold capitalize">
+          <p className="text-xl  text-slate-800 text-muted-foreground font-bold capitalize">
             {role} Dashboard
           </p>
         </div>
@@ -357,21 +357,21 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl text-slate-800  font-bold mb-2">
+          <h2 className="text-4xl text-slate-800  font-bold mb-2">
             Welcome back, {user?.email?.split("@")[0] || "User"}!
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-xl">
             {role === "student"
               ? "Check your kitchen duty schedule and position in the queue"
               : "Manage the kitchen duty queue and student assignments"}
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 ">
           <Card className="clay-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-[#e91e63]" />
+                <Calendar className="h-5 w-5 text-[#e91e63] " />
                 Today's Team
               </CardTitle>
             </CardHeader>
@@ -385,8 +385,10 @@ const Dashboard = () => {
                       key={member.id}
                       className="flex items-center justify-between"
                     >
-                      <span className="text-sm">{member.full_name}</span>
+                      <span className="text-xl">{member.full_name}</span>
                       <Badge
+                        className="text-lg"
+
                         variant={
                           member.status === "active" ? "default" : "secondary"
                         }
@@ -419,10 +421,12 @@ const Dashboard = () => {
                       key={member.id}
                       className="flex items-center justify-between"
                     >
-                      <span className="text-sm">{member.full_name}</span>
+                      <span className="text-xl">{member.full_name}</span>
                       <Badge
+                        className="text-lg"
+
                         variant={
-                          member.status === "active" ? "default" : "secondary"
+                          member.status === "active" ? "default" : "secondary" 
                         }
                       >
                         {member.status}
@@ -447,15 +451,15 @@ const Dashboard = () => {
               {role === "student" ? (
                 <>
                   {myPosition !== null && (
-                    <div className="text-center p-4 bg-primary/10 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">
+                    <div className="text-center p-4 bg-pink-100 rounded-lg ">
+                      <p className="text-xl text-muted-foreground mb-1">
                         Your Queue Position
                       </p>
-                      <p className="text-3xl font-bold text-primary">
+                      <p className="text-3xl font-bold text-[#e91e63]">
                         #{myPosition}
                       </p>
                       {myPosition >= 6 && myPosition <= 10 && (
-                        <p className="text-xs text-muted-foreground mt-2">
+                        <p className="text-xl text-muted-foreground mt-2">
                           You're in tomorrow's team
                         </p>
                       )}
@@ -466,16 +470,16 @@ const Dashboard = () => {
                   {skipRequest && (
                     <div className="p-3 border rounded-lg space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
+                        <span className="text-xl font-medium">
                           Skip Request
                         </span>
                         {getSkipStatusBadge(skipRequest.status)}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xl text-muted-foreground">
                         {skipRequest.reason}
                       </p>
                       {skipRequest.review_notes && (
-                        <div className="mt-2 p-2 bg-muted rounded text-xs">
+                        <div className="mt-2 p-2 bg-muted rounded text-xl">
                           <p className="font-medium">Coordinator Notes:</p>
                           <p>{skipRequest.review_notes}</p>
                         </div>
@@ -489,16 +493,16 @@ const Dashboard = () => {
                       <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-blue-900">
+                          <p className="text-xl font-medium text-blue-900">
                             Can't make it tomorrow?
                           </p>
-                          <p className="text-xs text-blue-700 mt-1">
+                          <p className="text-xl text-blue-700 mt-1">
                             Request to skip and swap with position 11
                           </p>
                         </div>
                       </div>
                       <Button
-                        className="w-full clay-button"
+                        className="w-full clay-button border-[#e91e63]   text-[#e91e63] hover:bg-[#e91e63]  hover:text-white"
                         variant="outline"
                         onClick={() => setShowSkipDialog(true)}
                       >
@@ -553,7 +557,7 @@ const Dashboard = () => {
                       <Badge variant="destructive" className="mb-2">
                         Rotation Paused
                       </Badge>
-                      <div className="text-sm space-y-2">
+                      <div className="text-xl space-y-2">
                         <p className="text-muted-foreground">
                           Auto-resume in: <strong>{getTimeRemaining()}</strong>
                         </p>
@@ -575,11 +579,11 @@ const Dashboard = () => {
                     <>
                       <Badge
                         variant="default"
-                        className="mb-2  px-10 py-2 text-[#e91e63] border-[#e91e63] bg-white  hover:text-white hover:bg-[#e91e63]"
+                        className="mb-2  text-sm px-10 py-2 text-[#e91e63] border-[#e91e63] bg-white  hover:text-white hover:bg-[#e91e63]"
                       >
                         Rotation Active
                       </Badge>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <p className="text-xl text-muted-foreground mb-4">
                         Next rotation: Tonight at 12:00 AM
                       </p>
                       <div className="flex gap-2">
@@ -631,7 +635,7 @@ const Dashboard = () => {
                 rows={4}
                 className="mt-2"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xl text-muted-foreground mt-1">
                 {skipReason.length}/20 characters minimum
               </p>
             </div>
@@ -671,7 +675,7 @@ const Dashboard = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
+            <p className="text-xl text-yellow-800">
               <strong>Note:</strong> This is for testing purposes. The automated
               midnight rotation will still run as scheduled. Running this
               multiple times will rotate the queue each time.

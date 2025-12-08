@@ -27,7 +27,7 @@ const Header = () => {
 
     
       <div className="flex items-center gap-6">
-        <Link to="/" className="text-lg font-medium text-black hover:text-gray-700">
+        <Link to="/" className="text-lg font-medium text-black hover:text-[#e91e63]">
           Home
         </Link>
 
@@ -35,16 +35,16 @@ const Header = () => {
         {user ? (
           <div className="flex items-center gap-4">
             <Link to="/dashboard">
-              <Button variant="ghost" className="text-lg font-medium text-black hover:bg-black/5">
+              <Button variant="ghost" className="text-lg font-medium text-black hover:bg-[#e91e63]">
                 Dashboard
               </Button>
             </Link>
             <Button 
               onClick={handleSignOut}
               variant="outline" 
-              className="border-[#E91E63] text-[#E91E63] hover:bg-[#E91E63] hover:text-white"
+              className="border-[#E91E63] text-md  text-[#E91E63] hover:bg-[#E91E63] hover:text-white"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              
               Sign Out
             </Button>
           </div>
@@ -52,7 +52,7 @@ const Header = () => {
           <Link to="/auth">
             <Button 
               variant="ghost" 
-              className="text-lg font-medium text-black hover:bg-black/5 hover:text-black"
+              className="text-lg font-medium text-md text-black hover:bg-[#e91e63]  hover:text-white "
             >
               Login
             </Button>

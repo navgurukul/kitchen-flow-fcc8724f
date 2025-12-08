@@ -239,7 +239,7 @@ export default function SkipRequests() {
                           Position: {request.queue_position_at_request} • {request.profiles.email}
                         </CardDescription>
                       </div>
-                      <span className="text-sm text-gray-500">{getTimeAgo(request.requested_at)}</span>
+                      <span className="text-xl text-gray-500">{getTimeAgo(request.requested_at)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -270,9 +270,9 @@ export default function SkipRequests() {
                     {request.status !== 'pending' && request.review_notes && (
                       <div className="bg-gray-50 p-3 rounded-md">
                         <Label className="font-semibold">Review Notes:</Label>
-                        <p className="text-gray-700 text-sm mt-1">{request.review_notes}</p>
+                        <p className="text-gray-700 text-xl mt-1">{request.review_notes}</p>
                         {request.reviewed_at && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xl text-gray-500 mt-1">
                             Reviewed {getTimeAgo(request.reviewed_at)}
                           </p>
                         )}
@@ -299,7 +299,7 @@ export default function SkipRequests() {
                       <strong>{selectedRequest?.profiles.full_name}</strong> at position{' '}
                       <strong>{selectedRequest?.queue_position_at_request}</strong> will swap positions with the student at position 11.
                     </p>
-                    <p className="text-sm text-amber-600">
+                    <p className="text-xl text-amber-600">
                       This will move them to position 11 and bring the position 11 student into tomorrow's team.
                     </p>
                   </>

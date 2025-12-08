@@ -21,10 +21,10 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 gradient-subtle">
-      <Card className="w-full max-w-md claymorphic border-2">
+    <div className="min-h-screen  flex items-center justify-center p-4 gradient-subtle">
+      <Card className="w-full max-w-md claymorphic  ">
         <CardHeader className="text-center space-y-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center  ">
             <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-medium">
               <ChefHat className="w-8 h-8 text-primary-foreground" />
             </div>
@@ -47,7 +47,7 @@ const Auth = () => {
             <Button
               onClick={handleGoogleSignIn}
               variant="outline"
-              className="w-full h-12 text-base shadow-medium gap-3"
+              className="w-full h-12 border-pink-400  text-base shadow-medium gap-3"
             >
               <FcGoogle className="w-6 h-6" />
               Sign in with Google

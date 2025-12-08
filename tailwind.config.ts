@@ -12,7 +12,9 @@ export default {
         "2xl": "1400px",
       },
     },
+    
     extend: {
+      
      fontFamily: {
         // Corrected line: Use defaultTheme.fontFamily.sans as fallback
         'samarkan': ['Samarkan', ...defaultTheme.fontFamily.sans],
@@ -28,6 +30,7 @@ export default {
           foreground: "hsl(var(--primary-foreground))",
           glow: "hsl(var(--primary-glow))",
         },
+      
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",

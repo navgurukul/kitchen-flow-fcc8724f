@@ -4,51 +4,58 @@
 
  
 
+
+@layer components {
+
+  .switch-custom-thumb[data-state="checked"] > span {
+  
+    background-color: rgb(249, 111, 134) !important; 
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  }
+
+  .switch-custom-thumb {
+   
+    background-color: #ffe4e1 !important;
+  }
+}
+
+
 @layer base {
   :root {
-    /* Claymorphic Design - Orange Theme */
-    --background: 30 15% 96%;
-    --foreground: 20 10% 15%;
-
-    --card: 30 20% 98%;
-    --card-foreground: 20 10% 15%;
-
-    --popover: 30 20% 98%;
-    --popover-foreground: 20 10% 15%;
-
-    /* Orange as primary hero color */
-    --primary: 24 95% 55%;
+  
+    --primary: 337 77% 52%; 
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 24 95% 65%;
+--radius: 0.50rem;
+   
+    --primary-glow: 337 77% 62%; 
 
-    --secondary: 28 30% 90%;
-    --secondary-foreground: 20 10% 15%;
+   
 
-    --muted: 28 25% 92%;
-    --muted-foreground: 20 8% 45%;
-
-    --accent: 24 90% 50%;
+    --accent: 337 77% 48%;  
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+   
 
-    --border: 28 20% 85%;
-    --input: 28 20% 90%;
-    --ring: 24 95% 55%;
+    --ring: 337 77% 52%;
 
-    /* Claymorphic radius */
-    --radius: 1.25rem;
+   --shadow-soft: 0 8px 24px -4px hsl(337 77% 52% / 0.15); 
+  --shadow-medium: 0 12px 32px -8px hsl(337 77% 52% / 0.25);
+  --shadow-strong: 0 16px 48px -12px hsl(337 77% 52% / 0.35);
 
-    /* Claymorphic shadows */
-    --shadow-soft: 0 8px 24px -4px hsl(24 95% 55% / 0.15);
-    --shadow-medium: 0 12px 32px -8px hsl(24 95% 55% / 0.25);
-    --shadow-strong: 0 16px 48px -12px hsl(24 95% 55% / 0.35);
-
-    /* Gradient definitions */
-    --gradient-primary: linear-gradient(135deg, hsl(24 95% 55%), hsl(24 95% 65%));
+  
+    --gradient-primary: linear-gradient(135deg, hsl(337 77% 52%), hsl(337 77% 62%)); 
     --gradient-subtle: linear-gradient(180deg, hsl(30 20% 98%), hsl(28 25% 94%));
   }
+
+  .dark {
+    
+--primary: 337 77% 52%;  
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 337 77% 62%;
+
+    
+  }
+}
 
   .dark {
     --background: 20 15% 8%;
@@ -80,11 +87,11 @@
     --input: 20 15% 18%;
     --ring: 24 95% 55%;
 
-    --shadow-soft: 0 8px 24px -4px hsl(0 0% 0% / 0.4);
-    --shadow-medium: 0 12px 32px -8px hsl(0 0% 0% / 0.5);
-    --shadow-strong: 0 16px 48px -12px hsl(0 0% 0% / 0.6);
+    --shadow-soft: 0 8px 24px -4px hsl(337 77% 52% / 0.15); 
+  --shadow-medium: 0 12px 32px -8px hsl(337 77% 52% / 0.25);
+  --shadow-strong: 0 16px 48px -12px hsl(337 77% 52% / 0.35);
   }
-}
+
 
 @layer base {
   * {
@@ -99,8 +106,12 @@
 
 @layer utilities {
   .claymorphic {
-    @apply rounded-[var(--radius)] bg-card shadow-[var(--shadow-soft)] border border-border/50;
+    @apply rounded-[var(--radius)] bg-card shadow-[var(--shadow-soft)] border border-border;
+     
+    
   }
+  
+  
   
   .claymorphic-hover {
     @apply transition-all duration-300 hover:shadow-[var(--shadow-medium)] hover:-translate-y-1;

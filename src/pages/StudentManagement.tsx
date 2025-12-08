@@ -455,7 +455,7 @@ const StudentManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xl font-medium">
                 Total Students
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -466,7 +466,7 @@ const StudentManagement = () => {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xl font-medium">
                 Active Students
               </CardTitle>
               <UserCheck className="h-4 w-4 text-green-500" />
@@ -479,7 +479,7 @@ const StudentManagement = () => {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xl font-medium">
                 Inactive Students
               </CardTitle>
               <UserX className="h-4 w-4 text-muted-foreground" />
@@ -527,9 +527,9 @@ const StudentManagement = () => {
             </div>
 
             {loading ? (
-              <div className="text-center py-8">Loading...</div>
+              <div className="text-center  py-8">Loading...</div>
             ) : (
-              <div className="border rounded-lg">
+              <div className="border  rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -567,7 +567,7 @@ const StudentManagement = () => {
                                         targetStudent: student,
                                       })
                                     }
-                                    className="h-7 px-3 text-xs text-muted-foreground hover:bg-purple-100 hover:text-purple-700"
+                                    className="h-7 px-3 text-sm text-muted-foreground hover:bg-purple-100 hover:text-purple-700"
                                   >
                                     Promote
                                   </Button>
@@ -579,8 +579,7 @@ const StudentManagement = () => {
                             </TooltipProvider>
                           )}
                         </TableCell>
-
-                        {/* ✅ Status Column Cell */}
+ 
                         <TableCell>
                           {student.status === "active" ? (
                             <Badge
@@ -602,18 +601,26 @@ const StudentManagement = () => {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             {!student.can_change_status ? (
-                              <Switch
-                                checked={student.status === "active"}
-                                disabled={true}
-                              />
-                            ) : (
-                              <Switch
-                                checked={student.status === "active"}
-                                onCheckedChange={() =>
-                                  handleStatusToggle(student)
-                                }
-                              />
-                            )}
+                            
+<Switch
+    checked={student.status === "active"}
+    disabled={true}
+    className="
+        h-6 w-12           
+        data-[state=checked]:bg-black
+        bg-rose-400        
+        switch-custom-thumb"/>
+) : (
+    <Switch
+        checked={student.status === "active"}
+        onCheckedChange={() => handleStatusToggle(student)}
+        className="
+            h-6 w-12          
+            data-[state=checked]:bg-emerald-500  
+            bg-rose-400        
+            border-0          
+            switch-custom-thumb "/>
+                           )}
 
                             <Button
                               variant="ghost"

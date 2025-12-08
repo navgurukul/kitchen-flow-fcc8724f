@@ -73,18 +73,6 @@ const QueueItem = ({ item, index }: QueueItemProps) => {
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        {/* Status badges removed from here */}
-
-        {index >= 1 && index < 6 && (
-  <Badge variant="outline">Today's Team</Badge>
-)}
-
-{index >= 6 && index < 11 && (
-  <Badge variant="outline">Tomorrow's Team</Badge>
-)}
-
-      </div>
     </div>
   );
 };
@@ -322,7 +310,7 @@ const QueueManagement = () => {
                 <p className="font-medium text-foreground">
                   Automated Queue Rotation
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xl text-muted-foreground">
                   Queue automatically rotates at midnight (00:00 IST) every day
                 </p>
               </div>
@@ -375,11 +363,11 @@ const QueueManagement = () => {
                           />
                           <label
                             htmlFor={student.id}
-                            className="flex-1 cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            className="flex-1 cursor-pointer text-2xl font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             <div>
                               <p>{student.full_name}</p>
-                              <p className="text-muted-foreground text-xs">
+                              <p className="text-muted-foreground text-xl">
                                 {student.email}
                               </p>
                             </div>
@@ -428,7 +416,7 @@ const QueueManagement = () => {
             ) : (
               <div className="text-center py-8  text-muted-foreground">
                 <p>No students in queue</p>
-                <p className="text-sm">
+                <p className="text-xl">
                   Use "Add Student" or "Bulk Initialize" to get started
                 </p>
               </div>
