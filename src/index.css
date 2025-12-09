@@ -29,7 +29,9 @@
    
     --primary-glow: 337 77% 62%; 
 
-   
+   --shadow-soft: 0 8px 24px -4px hsl(337 77% 52% / 0.15); 
+  --shadow-medium: 0 12px 32px -8px hsl(337 77% 52% / 0.25);
+  --shadow-strong: 0 16px 48px -12px hsl(337 77% 52% / 0.35);
 
     --accent: 337 77% 48%;  
     --accent-foreground: 0 0% 100%;
@@ -37,11 +39,15 @@
    
 
     --ring: 337 77% 52%;
+ 
+--background: 0 0% 100%;
+    --foreground: 20 10% 15%;  
 
-   --shadow-soft: 0 8px 24px -4px hsl(337 77% 52% / 0.15); 
-  --shadow-medium: 0 12px 32px -8px hsl(337 77% 52% / 0.25);
-  --shadow-strong: 0 16px 48px -12px hsl(337 77% 52% / 0.35);
-
+    --card: 0 0% 100%;      
+    --card-foreground: 20 10% 15%;
+    
+    --popover: 0 0% 100%;     
+    --popover-foreground: 20 10% 15%;
   
     --gradient-primary: linear-gradient(135deg, hsl(337 77% 52%), hsl(337 77% 62%)); 
     --gradient-subtle: linear-gradient(180deg, hsl(30 20% 98%), hsl(28 25% 94%));
@@ -62,7 +68,7 @@
     --foreground: 30 10% 95%;
 
     --card: 20 20% 10%;
-    --card-foreground: 30 10% 95%;
+    --card-foreground: 0 0% 95%;
 
     --popover: 20 20% 10%;
     --popover-foreground: 30 10% 95%;
@@ -106,7 +112,7 @@
 
 @layer utilities {
   .claymorphic {
-    @apply rounded-[var(--radius)] bg-card shadow-[var(--shadow-soft)] border border-border;
+    @apply rounded-[var(--radius)] bg-white shadow-[var(--shadow-soft)] border border-border;
      
     
   }

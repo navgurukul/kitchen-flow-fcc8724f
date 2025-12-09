@@ -242,7 +242,7 @@ const DevContact = ({ name, linkedInUrl, githubUrl, phoneUrl }) => (
 
 
 
-<footer className="bg-[#FFE4E1] py-10 mt-4  ">
+<footer className="bg-[#FFE4E1] py-10  ">
             <div className="container mx-auto px-4">
                 
                  
@@ -265,7 +265,7 @@ const DevContact = ({ name, linkedInUrl, githubUrl, phoneUrl }) => (
                         </p>
                         
                        
-                        <div className="flex  space-x-3 pt-2">
+                        {/* <div className="flex   space-x-3 pt-2">
                             <a href="https://www.facebook.com/navgurukul" target="_blank" rel="noopener noreferrer" 
                                className="p-2 border-2 border-[#E91E63] rounded-full text-[#E91E63] hover:bg-[#E91E63] hover:text-white transition">
                                 <Facebook className="w-5 h-5" />
@@ -278,13 +278,28 @@ const DevContact = ({ name, linkedInUrl, githubUrl, phoneUrl }) => (
                                className="p-2 border-2 border-[#E91E63] rounded-full text-[#E91E63] hover:bg-[#E91E63] hover:text-white transition">
                                 <Twitter className="w-5 h-5" />
                             </a>
-                        </div>
+                        </div> */}
+
+                        <div className="flex space-x-3 pt-2 justify-center">
+    <a href="https://www.facebook.com/navgurukul" target="_blank" rel="noopener noreferrer" 
+        className="p-2 border-2 border-[#E91E63] rounded-full text-[#E91E63] hover:bg-[#E91E63] hover:text-white transition">
+        <Facebook className="w-5 h-5" />
+    </a>
+    <a href="https://www.linkedin.com/company/navgurukul" target="_blank" rel="noopener noreferrer" 
+        className="p-2 border-2 border-[#E91E63] rounded-full text-[#E91E63] hover:bg-[#E91E63] hover:text-white transition">
+        <Linkedin className="w-5 h-5" />
+    </a>
+    <a href="https://twitter.com/navgurukul" target="_blank" rel="noopener noreferrer" 
+        className="p-2 border-2 border-[#E91E63] rounded-full text-[#E91E63] hover:bg-[#E91E63] hover:text-white transition">
+        <Twitter className="w-5 h-5" />
+    </a>
+</div>
                     </div>
                     
                    
-                    <div className="flex flex-col">
+                    <div className=" flex flex-col ">
                         <h3 className="text-2xl font-bold text-gray-800 mb-4">Links</h3>
-                        <ul className="space-y-2 text-xl text-gray-700">
+                        <ul className="space-y-2 text-xl text-gray-700   ">
                             <li><a href="#about-us" className="hover:text-[#E91E63] transition">About Us</a></li>
                             <li><a href="#features" className="hover:text-[#E91E63] transition">Features</a></li>
                             <li><a href="#hero-section" className="hover:text-[#E91E63] transition">User Experience</a></li>
@@ -302,7 +317,7 @@ const DevContact = ({ name, linkedInUrl, githubUrl, phoneUrl }) => (
                 </div>
 
                
-                <div className="flex flex-col md:flex-row justify-around items-start space-y-8 md:space-y-0 text-center   mb-8">
+                <div className="flex flex-col md:flex-row justify-around items-center md:items-start space-y-8 md:space-y-0 mb-8">
                     {devData.map((dev) => (
                         <DevContact 
                             key={dev.name}
