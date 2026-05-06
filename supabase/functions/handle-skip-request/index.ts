@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseKey = Deno.env.get("SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get authenticated user
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
         .gte("reviewed_at", todayStart.toISOString());
 
       const excludedProfileIds =
-        recentApprovals?.map((r) => r.profile_id) || [];
+        recentApprovals?.map((r: any) => r.profile_id) || [];
 
       console.log(
         "Excluded profile IDs from today's approved requests:",
