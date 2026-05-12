@@ -70,6 +70,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("user_id", userId)
         .single();
 
+      // If user role doesn't exist, create it
+      if (error?.code === 'PGRST116') {
+        console.log("Creating user role for new user...");
+        const user = await supabase.auth.getUser();
+        
+        // Create user_roles entry
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert([{ user_id: userId, role: "student" }]);
+        
+        // Create profiles entry
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert([{
+            user_id: userId,
+            full_name: user.data.user?.user_metadata?.full_name || user.data.user?.email || "User",
+            email: user.data.user?.email || "unknown@example.com"
+          }]);
+        
+        if (roleError || profileError) {
+          console.error("Error creating user entries:", roleError || profileError);
+          throw roleError || profileError;
+        }
+        
+        setRole("student");
+        setLoading(false);
+        return;
+      }
+
       if (error) throw error;
       setRole(data.role as UserRole);
     } catch (error: any) {
