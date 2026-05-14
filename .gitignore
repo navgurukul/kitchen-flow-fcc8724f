@@ -27,3 +27,4 @@ dist-ssr
 # Supabase
 supabase/.temp/
 .supabase/
+config.toml
