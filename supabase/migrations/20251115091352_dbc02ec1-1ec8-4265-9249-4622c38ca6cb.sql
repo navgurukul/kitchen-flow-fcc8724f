@@ -1,5 +1,10 @@
--- Create enum for user roles
-CREATE TYPE public.app_role AS ENUM ('coordinator', 'student');
+-- Create enum for user roles (with exception handling for CLI idempotency)
+DO $$ 
+BEGIN
+  CREATE TYPE public.app_role AS ENUM ('coordinator', 'student');
+EXCEPTION WHEN duplicate_object THEN 
+  NULL;
+END $$;
 
 -- Create user_roles table
 CREATE TABLE public.user_roles (
