@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -16,7 +17,7 @@ interface AuthContextType {
   session: Session | null;
   role: UserRole | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: unknown }>;
   signOut: () => Promise<void>;
 }
 
@@ -28,6 +29,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  const fetchUserRole = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setRole((data?.role as UserRole) ?? "student");
+    } catch (error: unknown) {
+      console.error("Error fetching user role:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch user role",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -60,29 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .single();
-
-      if (error) throw error;
-      setRole(data.role as UserRole);
-    } catch (error: any) {
-      console.error("Error fetching user role:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch user role",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchUserRole]);
 
   const signInWithGoogle = async () => {
     try {
@@ -100,15 +101,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        const message = error instanceof Error ? error.message : "Failed to sign in with Google";
         toast({
           title: "Error",
-          description: error.message,
+          description: message,
           variant: "destructive",
         });
       }
 
       return { error };
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: "Failed to sign in with Google",
@@ -131,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Redirect to auth page with full page reload to clear all state
       window.location.href = "/auth";
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: "Failed to sign out",
@@ -139,9 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
   };
-
   return (
-    <AuthContext.Provider
+  <AuthContext.Provider
       value={{ user, session, role, loading, signInWithGoogle, signOut }}
     >
       {children}
