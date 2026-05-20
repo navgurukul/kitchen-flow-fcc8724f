@@ -188,14 +188,27 @@ const Dashboard = () => {
         if (profileData) {
           setMyProfileId(profileData.id);
 
-          const { data: queueData } = await supabase
-            .from("kitchen_queue")
-            .select("queue_position")
-            .eq("profile_id", profileData.id)
-            .maybeSingle();
+          // Keep position aligned with dashboard teams:
+          // today team => 1..5, tomorrow team => 6..10
+          const todayIndex =
+            todayAssignment?.profile_ids?.indexOf(profileData.id) ?? -1;
+          const tomorrowIndex =
+            tomorrowAssignment?.profile_ids?.indexOf(profileData.id) ?? -1;
 
-          if (queueData) {
-            setMyPosition(queueData.queue_position);
+          if (todayIndex >= 0) {
+            setMyPosition(todayIndex + 1);
+          } else if (tomorrowIndex >= 0) {
+            setMyPosition(tomorrowIndex + 6);
+          } else {
+            const { data: queueData } = await supabase
+              .from("kitchen_queue")
+              .select("queue_position")
+              .eq("profile_id", profileData.id)
+              .maybeSingle();
+
+            if (queueData) {
+              setMyPosition(queueData.queue_position);
+            }
           }
 
           // Fetch skip request if exists
