@@ -105,7 +105,13 @@ const QueueManagement = () => {
 
   const fetchQueue = async () => {
     try {
-      setLoading(true);
+      const shouldShowLoading =
+        todayTeam.length === 0 &&
+        tomorrowTeam.length === 0 &&
+        remainingQueue.length === 0;
+      if (shouldShowLoading) {
+        setLoading(true);
+      }
       
       // Get IST dates like Dashboard does
       const IST_OFFSET = 5.5 * 60 * 60 * 1000;
@@ -116,20 +122,60 @@ const QueueManagement = () => {
         .toISOString()
         .split("T")[0];
 
-      const { data: assignments, error: assignError } = await supabase
-        .from("kitchen_assignments")
-        .select("*")
-        .in("assignment_date", [today, tomorrow]);
+      const [assignmentsResult, allQueueResult] = await Promise.all([
+        supabase
+          .from("kitchen_assignments")
+          .select("*")
+          .in("assignment_date", [today, tomorrow]),
+        supabase
+          .from("kitchen_queue")
+          .select(
+            `
+          id,
+          queue_position,
+          profiles:profile_id (
+            id,
+            full_name,
+            status,
+            email
+          )
+        `
+          )
+          .order("queue_position", { ascending: true }),
+      ]);
 
-      if (assignError) throw assignError;
+      if (assignmentsResult.error) throw assignmentsResult.error;
+      if (allQueueResult.error) throw allQueueResult.error;
+
+      const assignments = assignmentsResult.data;
 
       const todayAssignment = assignments?.find(
         (a) => a.assignment_date === today
       );
+      const tomorrowAssignment = assignments?.find(
+        (a) => a.assignment_date === tomorrow
+      );
+
+      const [todayProfilesResult, tomorrowProfilesResult] = await Promise.all([
+        todayAssignment?.profile_ids?.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, email, status")
+              .in("id", todayAssignment.profile_ids)
+          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string; email: string; status: string }>, error: null }),
+        tomorrowAssignment?.profile_ids?.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, email, status")
+              .in("id", tomorrowAssignment.profile_ids)
+          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string; email: string; status: string }>, error: null }),
+      ]);
+
+      if (todayProfilesResult.error) throw todayProfilesResult.error;
+      if (tomorrowProfilesResult.error) throw tomorrowProfilesResult.error;
+
       if (todayAssignment) {
-        const { data: todayProfiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, status");
+        const todayProfiles = todayProfilesResult.data;
 
         const todayTeamData = (todayAssignment.profile_ids || [])
           .map((profileId: string, index: number) => {
@@ -148,13 +194,8 @@ const QueueManagement = () => {
         setTodayTeam(todayTeamData);
       }
 
-      const tomorrowAssignment = assignments?.find(
-        (a) => a.assignment_date === tomorrow
-      );
       if (tomorrowAssignment) {
-        const { data: tomorrowProfiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, status");
+        const tomorrowProfiles = tomorrowProfilesResult.data;
 
         const tomorrowTeamData = (tomorrowAssignment.profile_ids || [])
           .map((profileId: string, index: number) => {
@@ -173,23 +214,7 @@ const QueueManagement = () => {
         setTomorrowTeam(tomorrowTeamData);
       }
 
-      const { data: allQueue, error: queueError } = await supabase
-        .from("kitchen_queue")
-        .select(
-          `
-          id,
-          queue_position,
-          profiles:profile_id (
-            id,
-            full_name,
-            status,
-            email
-          )
-        `
-        )
-        .order("queue_position", { ascending: true });
-
-      if (queueError) throw queueError;
+      const allQueue = allQueueResult.data;
 
       const assignedProfileIds = new Set<string>([
         ...(todayAssignment?.profile_ids || []),
