@@ -68,6 +68,69 @@ const Dashboard = () => {
     }
   }, [user, role]);
 
+  // Check if skip request should be shown (valid only for today)
+  const isSkipRequestToday = () => {
+    if (!skipRequest || skipRequest.status === "pending") {
+      return false;
+    }
+
+    // Compare the date of review_notes with today's date
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST timezone
+    const reviewedDate = new Date(skipRequest.reviewed_at || new Date());
+    const today = new Date(Date.now() + IST_OFFSET);
+
+    // Convert both to date string (YYYY-MM-DD) for comparison
+    const reviewedDateString = reviewedDate.toISOString().split('T')[0];
+    const todayString = today.toISOString().split('T')[0];
+
+    return reviewedDateString === todayString;
+  };
+
+  // Auto-dismiss skip request at midnight and refresh periodically
+  useEffect(() => {
+    if (!skipRequest || skipRequest.status === "pending") {
+      return;
+    }
+
+    // Check immediately if still valid today
+    if (!isSkipRequestToday()) {
+      setSkipRequest(null);
+      return;
+    }
+
+    // Set up periodic check (every minute) and midnight dismiss
+    const calculateTimeUntilMidnight = () => {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      return midnight.getTime() - now.getTime();
+    };
+
+    const timeUntilMidnight = calculateTimeUntilMidnight();
+    
+    console.log(`Skip request will auto-dismiss in ${Math.round(timeUntilMidnight / 1000 / 60)} minutes`);
+
+    // Set timeout to dismiss at midnight
+    const midnightTimer = setTimeout(() => {
+      console.log("Midnight reached - clearing skip request");
+      setSkipRequest(null);
+      fetchTeamData();
+    }, timeUntilMidnight);
+
+    // Also set up periodic check (every minute) in case of time zone issues
+    const minuteTimer = setInterval(() => {
+      if (!isSkipRequestToday()) {
+        console.log("Skip request is no longer valid - clearing");
+        setSkipRequest(null);
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      clearTimeout(midnightTimer);
+      clearInterval(minuteTimer);
+    };
+  }, [skipRequest]);
+
   const fetchTeamData = async () => {
     try {
       setLoading(true);
@@ -228,7 +291,9 @@ const Dashboard = () => {
           description: `Queue rotated! Today's team: ${data.todayTeam}, Tomorrow's team: ${data.tomorrowTeam}`,
         });
         // Refresh data to show updated assignments
-        fetchTeamData();
+        await fetchTeamData();
+        // Also clear any old skip requests and refresh
+        setSkipRequest(null);
       } else if (data?.message) {
         toast({
           title: "Rotation Skipped",
@@ -308,7 +373,7 @@ const Dashboard = () => {
     myPosition !== null &&
     myPosition >= 6 &&
     myPosition <= 10 &&
-    !skipRequest;
+    (!skipRequest || !isSkipRequestToday());
 
   const getSkipStatusBadge = (status: string) => {
     switch (status) {
@@ -467,7 +532,7 @@ const Dashboard = () => {
                   )}
 
                   {/* Skip Request Status */}
-                  {skipRequest && (
+                  {skipRequest && isSkipRequestToday() && (
                     <div className="p-3 border rounded-lg space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xl font-medium">
