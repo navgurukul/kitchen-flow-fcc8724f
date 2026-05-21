@@ -48,19 +48,18 @@ interface Profile {
 
 interface QueueItemProps {
   item: QueueItem;
-  index: number;
+  section: "today" | "tomorrow" | "remaining";
 }
 
-const QueueItem = ({ item, index }: QueueItemProps) => {
+const QueueItem = ({ item, section }: QueueItemProps) => {
+  const bgColor = 
+    section === "today" ? "bg-pink-100 border-pink-300" :
+    section === "tomorrow" ? "bg-blue-100 border-blue-300" :
+    "bg-white border-gray-200";
+
   return (
     <div
-      className={`flex items-center justify-between p-4 rounded-lg border ${
-        index < 6
-          ? "bg-primary/10 border-primary/20"
-          : index < 11
-          ? "bg-secondary/10 border-secondary/20"
-          : "bg-background"
-      }`}
+      className={`flex items-center justify-between p-4 rounded-lg border ${bgColor}`}
     >
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary">
@@ -82,6 +81,9 @@ const QueueManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [todayTeam, setTodayTeam] = useState<QueueItem[]>([]);
+  const [tomorrowTeam, setTomorrowTeam] = useState<QueueItem[]>([]);
+  const [remainingQueue, setRemainingQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [availableStudents, setAvailableStudents] = useState<Profile[]>([]);
@@ -103,11 +105,32 @@ const QueueManagement = () => {
 
   const fetchQueue = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("kitchen_queue")
-        .select(
-          `
+      const shouldShowLoading =
+        todayTeam.length === 0 &&
+        tomorrowTeam.length === 0 &&
+        remainingQueue.length === 0;
+      if (shouldShowLoading) {
+        setLoading(true);
+      }
+      
+      // Get IST dates like Dashboard does
+      const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+      const today = new Date(Date.now() + IST_OFFSET)
+        .toISOString()
+        .split("T")[0];
+      const tomorrow = new Date(Date.now() + IST_OFFSET + 86400000)
+        .toISOString()
+        .split("T")[0];
+
+      const [assignmentsResult, allQueueResult] = await Promise.all([
+        supabase
+          .from("kitchen_assignments")
+          .select("*")
+          .in("assignment_date", [today, tomorrow]),
+        supabase
+          .from("kitchen_queue")
+          .select(
+            `
           id,
           queue_position,
           profiles:profile_id (
@@ -117,11 +140,94 @@ const QueueManagement = () => {
             email
           )
         `
-        )
-        .order("queue_position", { ascending: true });
+          )
+          .order("queue_position", { ascending: true }),
+      ]);
 
-      if (error) throw error;
-      setQueue(data || []);
+      if (assignmentsResult.error) throw assignmentsResult.error;
+      if (allQueueResult.error) throw allQueueResult.error;
+
+      const assignments = assignmentsResult.data;
+
+      const todayAssignment = assignments?.find(
+        (a) => a.assignment_date === today
+      );
+      const tomorrowAssignment = assignments?.find(
+        (a) => a.assignment_date === tomorrow
+      );
+
+      const [todayProfilesResult, tomorrowProfilesResult] = await Promise.all([
+        todayAssignment?.profile_ids?.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, email, status")
+              .in("id", todayAssignment.profile_ids)
+          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string; email: string; status: string }>, error: null }),
+        tomorrowAssignment?.profile_ids?.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, email, status")
+              .in("id", tomorrowAssignment.profile_ids)
+          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string; email: string; status: string }>, error: null }),
+      ]);
+
+      if (todayProfilesResult.error) throw todayProfilesResult.error;
+      if (tomorrowProfilesResult.error) throw tomorrowProfilesResult.error;
+
+      if (todayAssignment) {
+        const todayProfiles = todayProfilesResult.data;
+
+        const todayTeamData = (todayAssignment.profile_ids || [])
+          .map((profileId: string, index: number) => {
+            const profile = todayProfiles?.find((p) => p.id === profileId);
+            return {
+              id: profileId,
+              queue_position: index + 1,
+              profiles: {
+                id: profile?.id || profileId,
+                full_name: profile?.full_name || "Unknown",
+                email: profile?.email || "",
+                status: profile?.status || "active",
+              },
+            };
+          });
+        setTodayTeam(todayTeamData);
+      }
+
+      if (tomorrowAssignment) {
+        const tomorrowProfiles = tomorrowProfilesResult.data;
+
+        const tomorrowTeamData = (tomorrowAssignment.profile_ids || [])
+          .map((profileId: string, index: number) => {
+            const profile = tomorrowProfiles?.find((p) => p.id === profileId);
+            return {
+              id: profileId,
+              queue_position: index + 6,
+              profiles: {
+                id: profile?.id || profileId,
+                full_name: profile?.full_name || "Unknown",
+                email: profile?.email || "",
+                status: profile?.status || "active",
+              },
+            };
+          });
+        setTomorrowTeam(tomorrowTeamData);
+      }
+
+      const allQueue = allQueueResult.data;
+
+      const assignedProfileIds = new Set<string>([
+        ...(todayAssignment?.profile_ids || []),
+        ...(tomorrowAssignment?.profile_ids || []),
+      ]);
+
+      const remaining = (allQueue || []).filter((item) => {
+        const profileId = item.profiles?.id || "";
+        return item.queue_position > 10 && !assignedProfileIds.has(profileId);
+      });
+      setRemainingQueue(remaining);
+
+      setQueue(allQueue || []);
     } catch (error) {
       console.error("Error fetching queue:", error);
       toast({
@@ -136,7 +242,6 @@ const QueueManagement = () => {
 
   const fetchAvailableStudents = async () => {
     try {
-      // Fetch active profiles excluding coordinators (coordinators should never be in kitchen queue)
       const { data: allProfiles, error: profilesError } = await supabase
         .from("profiles_with_roles")
         .select("id, full_name, email, status")
@@ -168,7 +273,6 @@ const QueueManagement = () => {
     if (!selectedStudent) return;
 
     try {
-      // Query database for the actual max position
       const { data: maxData, error: maxError } = await supabase
         .from("kitchen_queue")
         .select("queue_position")
@@ -210,7 +314,6 @@ const QueueManagement = () => {
     if (selectedStudents.size === 0) return;
 
     try {
-      // Query database for the actual max position
       const { data: maxData, error: maxError } = await supabase
         .from("kitchen_queue")
         .select("queue_position")
@@ -301,7 +404,6 @@ const QueueManagement = () => {
         </Button> */}
         </div>
 
-        {/* Automated Rotation Notice */}
         <Card className="border-pink-300 bg-rose-100">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -407,11 +509,43 @@ const QueueManagement = () => {
           <CardContent>
             {loading ? (
               <p className="text-muted-foreground ">Loading queue...</p>
-            ) : filteredQueue.length > 0 ? (
-              <div className="space-y-2">
-                {filteredQueue.map((item, index) => (
-                  <QueueItem key={item.id} item={item} index={index} />
-                ))}
+            ) : todayTeam.length > 0 || tomorrowTeam.length > 0 || remainingQueue.length > 0 ? (
+              <div className="space-y-6">
+                {/* Today's Team */}
+                {todayTeam.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-pink-700">📅 Today's Team</h3>
+                    <div className="space-y-2">
+                      {todayTeam.map((item) => (
+                        <QueueItem key={item.id} item={item} section="today" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tomorrow's Team */}
+                {tomorrowTeam.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-blue-700">📆 Tomorrow's Team</h3>
+                    <div className="space-y-2">
+                      {tomorrowTeam.map((item) => (
+                        <QueueItem key={item.id} item={item} section="tomorrow" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Remaining */}
+                {remainingQueue.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-gray-700">📋 Remaining Queue</h3>
+                    <div className="space-y-2">
+                      {remainingQueue.map((item) => (
+                        <QueueItem key={item.id} item={item} section="remaining" />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8  text-muted-foreground">
