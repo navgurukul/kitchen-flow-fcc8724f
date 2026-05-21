@@ -31,6 +31,7 @@ interface TeamMember {
   id: string;
   full_name: string;
   status: string;
+  position: number;
 }
 
 interface SkipRequest {
@@ -133,7 +134,10 @@ const Dashboard = () => {
 
   const fetchTeamData = async () => {
     try {
-      setLoading(true);
+      const shouldShowLoading = todayTeam.length === 0 && tomorrowTeam.length === 0;
+      if (shouldShowLoading) {
+        setLoading(true);
+      }
       // Get dates in IST timezone (UTC+5:30)
       const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
       const today = new Date(Date.now() + IST_OFFSET)
@@ -159,22 +163,56 @@ const Dashboard = () => {
         (a) => a.assignment_date === tomorrow
       );
 
-      if (todayAssignment) {
-        const { data: todayProfiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, status")
-          .in("id", todayAssignment.profile_ids);
+      const [todayProfilesResult, tomorrowProfilesResult] = await Promise.all([
+        todayAssignment?.profile_ids?.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, status")
+              .in("id", todayAssignment.profile_ids)
+          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string; status: string }>, error: null }),
+        tomorrowAssignment?.profile_ids?.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, status")
+              .in("id", tomorrowAssignment.profile_ids)
+          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string; status: string }>, error: null }),
+      ]);
 
-        setTodayTeam(todayProfiles || []);
+      if (todayProfilesResult.error) throw todayProfilesResult.error;
+      if (tomorrowProfilesResult.error) throw tomorrowProfilesResult.error;
+
+      if (todayAssignment) {
+        const todayProfiles = todayProfilesResult.data;
+
+        const todayTeamData = (todayAssignment.profile_ids || []).map(
+          (profileId: string, index: number) => {
+            const profile = todayProfiles?.find((p) => p.id === profileId);
+            return {
+              id: profile?.id || profileId,
+              full_name: profile?.full_name || "Unknown",
+              status: profile?.status || "active",
+              position: index + 1,
+            };
+          }
+        );
+        setTodayTeam(todayTeamData);
       }
 
       if (tomorrowAssignment) {
-        const { data: tomorrowProfiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, status")
-          .in("id", tomorrowAssignment.profile_ids);
+        const tomorrowProfiles = tomorrowProfilesResult.data;
 
-        setTomorrowTeam(tomorrowProfiles || []);
+        const tomorrowTeamData = (tomorrowAssignment.profile_ids || []).map(
+          (profileId: string, index: number) => {
+            const profile = tomorrowProfiles?.find((p) => p.id === profileId);
+            return {
+              id: profile?.id || profileId,
+              full_name: profile?.full_name || "Unknown",
+              status: profile?.status || "active",
+              position: index + 6,
+            };
+          }
+        );
+        setTomorrowTeam(tomorrowTeamData);
       }
 
       // Fetch user's queue position (for students)
@@ -211,17 +249,26 @@ const Dashboard = () => {
             }
           }
 
-          // Fetch skip request if exists
+          // Fetch skip request if exists (only pending or reviewed today)
+          const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST timezone
+          const todayStart = new Date(Date.now() + IST_OFFSET);
+          todayStart.setHours(0, 0, 0, 0);
+          const todayISOString = todayStart.toISOString();
+
           const { data: skipData } = await supabase
             .from("skip_requests")
             .select("*")
             .eq("profile_id", profileData.id)
+            // Only fetch if: pending OR (reviewed and reviewed_at is today)
+            .or(`status.eq.pending,reviewed_at.gte.${todayISOString}`)
             .order("requested_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
           if (skipData) {
             setSkipRequest(skipData as SkipRequest);
+          } else {
+            setSkipRequest(null);
           }
         }
       }
@@ -461,12 +508,16 @@ const Dashboard = () => {
                   {todayTeam.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between p-2 rounded bg-pink-50"
                     >
-                      <span className="text-xl">{member.full_name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center font-bold text-sm text-pink-700">
+                          {member.position}
+                        </div>
+                        <span className="text-base font-medium">{member.full_name}</span>
+                      </div>
                       <Badge
-                        className="text-lg"
-
+                        className="text-xs"
                         variant={
                           member.status === "active" ? "default" : "secondary"
                         }
@@ -497,14 +548,18 @@ const Dashboard = () => {
                   {tomorrowTeam.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between p-2 rounded bg-blue-50"
                     >
-                      <span className="text-xl">{member.full_name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center font-bold text-sm text-blue-700">
+                          {member.position}
+                        </div>
+                        <span className="text-base font-medium">{member.full_name}</span>
+                      </div>
                       <Badge
-                        className="text-lg"
-
+                        className="text-xs"
                         variant={
-                          member.status === "active" ? "default" : "secondary" 
+                          member.status === "active" ? "default" : "secondary"
                         }
                       >
                         {member.status}
