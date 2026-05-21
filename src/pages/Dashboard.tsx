@@ -198,17 +198,26 @@ const Dashboard = () => {
             setMyPosition(queueData.queue_position);
           }
 
-          // Fetch skip request if exists
+          // Fetch skip request if exists (only pending or reviewed today)
+          const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST timezone
+          const todayStart = new Date(Date.now() + IST_OFFSET);
+          todayStart.setHours(0, 0, 0, 0);
+          const todayISOString = todayStart.toISOString();
+
           const { data: skipData } = await supabase
             .from("skip_requests")
             .select("*")
             .eq("profile_id", profileData.id)
+            // Only fetch if: pending OR (reviewed and reviewed_at is today)
+            .or(`status.eq.pending,reviewed_at.gte.${todayISOString}`)
             .order("requested_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
           if (skipData) {
             setSkipRequest(skipData as SkipRequest);
+          } else {
+            setSkipRequest(null);
           }
         }
       }
