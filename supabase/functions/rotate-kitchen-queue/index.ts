@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
       throw tomorrowError;
     }
 
-    // SEND EMAIL NOTIFICATIONS TO STUDENTS
+    
     console.log("📧 Sending email notifications...");
     
     // Send emails to tomorrow's team (more important - they need to know in advance)
