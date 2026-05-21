@@ -273,6 +273,75 @@ Deno.serve(async (req) => {
       throw tomorrowError;
     }
 
+    // SEND EMAIL NOTIFICATIONS TO STUDENTS
+    console.log("📧 Sending email notifications...");
+    
+    // Send emails to tomorrow's team (more important - they need to know in advance)
+    const tomorrowTeamIds = tomorrowTeam.map((item: any) => item.profiles.id);
+    if (tomorrowTeamIds.length > 0) {
+      try {
+        console.log(`📧 Sending notifications to ${tomorrowTeamIds.length} students for tomorrow's team`);
+        const emailResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-notification-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              profile_ids: tomorrowTeamIds,
+              assignment_date: tomorrow,
+              team_type: "tomorrow",
+            }),
+          }
+        );
+
+        const emailResult = await emailResponse.json();
+        if (emailResult.success) {
+          console.log(`✅ Successfully sent ${emailResult.summary.sent} emails for tomorrow's team`);
+        } else {
+          console.warn(`⚠️ Some emails failed for tomorrow's team: ${emailResult.message}`);
+        }
+      } catch (emailError) {
+        console.error("❌ Error sending tomorrow team emails:", emailError);
+        // Continue anyway - rotation should not fail if emails fail
+      }
+    }
+
+    // Send emails to today's team (optional - they might already be informed)
+    const todayTeamIds = todayTeam.map((item: any) => item.profiles.id);
+    if (todayTeamIds.length > 0) {
+      try {
+        console.log(`📧 Sending notifications to ${todayTeamIds.length} students for today's team`);
+        const emailResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-notification-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              profile_ids: todayTeamIds,
+              assignment_date: today,
+              team_type: "today",
+            }),
+          }
+        );
+
+        const emailResult = await emailResponse.json();
+        if (emailResult.success) {
+          console.log(`✅ Successfully sent ${emailResult.summary.sent} emails for today's team`);
+        } else {
+          console.warn(`⚠️ Some emails failed for today's team: ${emailResult.message}`);
+        }
+      } catch (emailError) {
+        console.error("❌ Error sending today team emails:", emailError);
+        // Continue anyway - rotation should not fail if emails fail
+      }
+    }
+
     // Rotate queue: move top 5 active students to bottom
     // IMPORTANT: We must update ALL queue items to avoid unique constraint violations
     const rotatedActiveQueue = [
