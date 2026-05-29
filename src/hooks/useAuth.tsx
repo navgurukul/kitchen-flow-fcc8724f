@@ -87,11 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      // Dynamic URL: works in both dev (localhost:8080) and production (Vercel)
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `https://localhost:8080/auth/callback`,
-          // redirectTo: 'https://kitchen-flow.lovable.app/auth/callback',
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
