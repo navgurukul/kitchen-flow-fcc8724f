@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  appType: 'spa',  // ✅ CRITICAL: Tell Vite to fallback to index.html for all routes (React Router will handle)
   server: {
     host: "::",
     port: 8080,
