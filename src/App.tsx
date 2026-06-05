@@ -33,7 +33,6 @@ const App = () => (
             {/* 1. Routes WITHOUT Layout (e.g., Auth, 404) */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="*" element={<NotFound />} />
             
             {/* 2. Routes WITH Layout (All other main pages) */}
             <Route element={<Layout />}>
@@ -45,6 +44,7 @@ const App = () => (
               <Route path="/student-management" element={<StudentManagement />} />
               <Route path="/skip-requests" element={<SkipRequests />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
 
           </Routes>
         </BrowserRouter>
