@@ -43,61 +43,35 @@ interface SkipRequest {
   queue_position_at_request: number;
 }
 
-// ─────────────────────────────────────────────────────────────
-// HELPERS (outside component — no stale closure issues)
-// ─────────────────────────────────────────────────────────────
 
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5h 30m in ms
 
-/** Today's date string in IST → "YYYY-MM-DD" */
 const getTodayIST = (): string =>
   new Date(Date.now() + IST_OFFSET).toISOString().split("T")[0];
 
-/** Start of today (midnight IST) as UTC ISO string */
 const getTodayStartIST = (): string => {
   const d = new Date(Date.now() + IST_OFFSET);
   const year  = parseInt(d.toISOString().slice(0, 4));
   const month = parseInt(d.toISOString().slice(5, 7)) - 1;
   const day   = parseInt(d.toISOString().slice(8, 10));
-  // midnight IST in UTC = midnight IST - 5h30m
   return new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - IST_OFFSET).toISOString();
 };
 
-/**
- * Should the skip request be shown in the UI?
- *
- * Rules:
- *  1. pending   → show only if position at time of request === current position
- *                 (agar rotation ho gaya aur wapas 6-10 aaya toh pending bhi hide)
- *  2. approved/rejected → show only if:
- *       a. position 6-10 ke andar ho
- *       b. current position === position at time of request
- *          (matlab koi rotation nahi hua beech mein)
- *       c. reviewed today (purana decision mat dikhao)
- *
- * KEY INSIGHT: queue_position_at_request === currentPosition
- * ensures that if rotation happened and student came back to 6-10,
- * the OLD request is NOT shown — because positions won't match.
- */
-const isSkipRequestActive = (
+
+const isSkipRequestActive = ( 
   req: SkipRequest | null,
   currentPosition: number | null
 ): boolean => {
   if (!req) return false;
   if (currentPosition === null) return false;
 
-  // Position must still be 6-10
   if (currentPosition < 6 || currentPosition > 10) return false;
 
-  // ✅ CORE FIX: Current position must match the position when request was made.
-  // If rotation happened and student came back to 6-10 with a different position,
-  // this check will FAIL → old request hidden, fresh skip allowed.
+  
   if (req.queue_position_at_request !== currentPosition) return false;
 
-  // For pending: position match is enough
   if (req.status === "pending") return true;
 
-  // For reviewed: also check it was reviewed today
   if (!req.reviewed_at) return false;
   const reviewedDay = new Date(new Date(req.reviewed_at).getTime() + IST_OFFSET)
     .toISOString()
@@ -105,9 +79,6 @@ const isSkipRequestActive = (
   return reviewedDay === getTodayIST();
 };
 
-// ─────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────
 
 const Dashboard = () => {
   const { user, role } = useAuth();
@@ -116,7 +87,7 @@ const Dashboard = () => {
 
   const [todayTeam,         setTodayTeam]         = useState<TeamMember[]>([]);
   const [tomorrowTeam,      setTomorrowTeam]       = useState<TeamMember[]>([]);
-  const [myPosition,        setMyPosition]         = useState<number | null>(null);
+  const [myPosition,        setMyPosition]         = useState<number | null>(null); //
   const [myProfileId,       setMyProfileId]        = useState<string | null>(null);
   const [skipRequest,       setSkipRequest]        = useState<SkipRequest | null>(null);
   const [showSkipDialog,    setShowSkipDialog]     = useState(false);
@@ -129,21 +100,16 @@ const Dashboard = () => {
   const [showRotateDialog,  setShowRotateDialog]   = useState(false);
   const [isRotating,        setIsRotating]         = useState(false);
 
-  // ── Derived: can this student request a skip? ──────────────
-  //  • Role = student
-  //  • Position 6–10 (tomorrow's team)
-  //  • No active skip request already exists
+  
   const canRequestSkip =
     role === "student" &&
     myPosition !== null &&
     myPosition >= 6 &&
     myPosition <= 10 &&
     !isSkipRequestActive(skipRequest, myPosition);
-
-  // ─────────────────────────────────────────────────────────
-  // FETCH TEAM DATA
-  // ─────────────────────────────────────────────────────────
-  const fetchTeamData = async () => {
+  
+  
+  const fetchTeamData = async () => {  ////
     try {
       if (todayTeam.length === 0 && tomorrowTeam.length === 0) setLoading(true);
 
@@ -151,7 +117,6 @@ const Dashboard = () => {
       const tomorrow = new Date(Date.now() + IST_OFFSET + 86_400_000)
         .toISOString().split("T")[0];
 
-      // ── Assignments ──────────────────────────────────────
       const { data: assignments, error: assignError } = await supabase
         .from("kitchen_assignments")
         .select("*")
@@ -162,7 +127,7 @@ const Dashboard = () => {
       const todayAssignment    = assignments?.find((a) => a.assignment_date === today);
       const tomorrowAssignment = assignments?.find((a) => a.assignment_date === tomorrow);
 
-      // ── Profiles for both teams ───────────────────────────
+     
       const [todayProfilesResult, tomorrowProfilesResult] = await Promise.all([
         todayAssignment?.profile_ids?.length
           ? supabase.from("profiles").select("id, full_name, status").in("id", todayAssignment.profile_ids)
@@ -175,7 +140,6 @@ const Dashboard = () => {
       if (todayProfilesResult.error)    throw todayProfilesResult.error;
       if (tomorrowProfilesResult.error) throw tomorrowProfilesResult.error;
 
-      // ── Build today's team ───────────────────────────────
       setTodayTeam(
         todayAssignment
           ? (todayAssignment.profile_ids || []).map((pid: string, i: number) => {
@@ -185,7 +149,6 @@ const Dashboard = () => {
           : []
       );
 
-      // ── Build tomorrow's team ────────────────────────────
       setTomorrowTeam(
         tomorrowAssignment
           ? (tomorrowAssignment.profile_ids || []).map((pid: string, i: number) => {
@@ -195,7 +158,6 @@ const Dashboard = () => {
           : []
       );
 
-      // ── Student-specific data ────────────────────────────
       if (role === "student") {
         const { data: profileData } = await supabase
           .from("profiles")
@@ -206,7 +168,6 @@ const Dashboard = () => {
         if (profileData) {
           setMyProfileId(profileData.id);
 
-          // Determine current queue position
           const todayIdx    = todayAssignment?.profile_ids?.indexOf(profileData.id) ?? -1;
           const tomorrowIdx = tomorrowAssignment?.profile_ids?.indexOf(profileData.id) ?? -1;
 
@@ -225,9 +186,8 @@ const Dashboard = () => {
           }
           setMyPosition(newPosition);
 
-          // ── Fetch skip request (only today's) ─────────────
-          // Fetch any request submitted today (pending OR reviewed today)
-          const { data: skipData } = await supabase
+          
+          const { data: skipData } = await supabase ////
             .from("skip_requests")
             .select("*")
             .eq("profile_id", profileData.id)
@@ -236,8 +196,7 @@ const Dashboard = () => {
             .limit(1)
             .maybeSingle();
 
-          // Use the helper WITH the freshly computed position so we don't
-          // rely on stale myPosition state
+          
           if (skipData && isSkipRequestActive(skipData as SkipRequest, newPosition)) {
             setSkipRequest(skipData as SkipRequest);
           } else {
@@ -258,22 +217,17 @@ const Dashboard = () => {
     setRotationSettings(data);
   };
 
-  // ─────────────────────────────────────────────────────────
-  // INITIAL LOAD
-  // ─────────────────────────────────────────────────────────
+  
   useEffect(() => {
     fetchTeamData();
     if (role === "coordinator") fetchRotationSettings();
   }, [user, role]);
 
-  // ─────────────────────────────────────────────────────────
-  // REAL-TIME SUBSCRIPTIONS (student only)
-  // ─────────────────────────────────────────────────────────
+  
   useEffect(() => {
     if (!myProfileId || role !== "student") return;
 
-    // 1️⃣  Listen for skip_request INSERT / UPDATE for this student
-    //     → coordinator ne approve/reject kiya toh turant UI update ho
+    
     const skipChannel = supabase
       .channel(`skip-req-${myProfileId}`)
       .on(
@@ -289,8 +243,7 @@ const Dashboard = () => {
 
           const updated = payload.new as SkipRequest;
 
-          // Use current myPosition from state for the active-check
-          setMyPosition((currentPos) => {
+          setMyPosition((currentPos) => {  // 
             const active = isSkipRequestActive(updated, currentPos);
             if (active) {
               setSkipRequest(updated);
@@ -302,11 +255,10 @@ const Dashboard = () => {
                     ? `Coordinator: ${updated.review_notes}`
                     : "Your skip request has been approved.",
                 });
-                // Refresh to get updated position after swap
                 setTimeout(fetchTeamData, 500);
               } else if (updated.status === "rejected") {
                 toast({
-                  title: "❌ Skip Request Rejected",
+                  title: " Skip Request Rejected",
                   description: updated.review_notes
                     ? `Coordinator: ${updated.review_notes}`
                     : "Your skip request was rejected.",
@@ -316,22 +268,18 @@ const Dashboard = () => {
             } else {
               setSkipRequest(null);
             }
-            return currentPos; // position unchanged here
+            return currentPos; 
           });
         }
       )
       .subscribe();
-
-    // 2️⃣  Listen for kitchen_assignments changes
-    //     → rotation hone pe position recalculate karo + skip request clear karo
-    const assignmentChannel = supabase
+        const assignmentChannel = supabase
       .channel(`assignments-${myProfileId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "kitchen_assignments" },
         (payload) => {
           console.log("[realtime] kitchen_assignments change — rotation detected:", payload);
-          // Clear skip request immediately; fetchTeamData will re-evaluate
           setSkipRequest(null);
           fetchTeamData();
         }
@@ -344,9 +292,7 @@ const Dashboard = () => {
     };
   }, [myProfileId, role]);
 
-  // ─────────────────────────────────────────────────────────
-  // MIDNIGHT AUTO-REFRESH  (fallback if realtime misses it)
-  // ─────────────────────────────────────────────────────────
+ 
   useEffect(() => {
     const now       = new Date();
     const midnight  = new Date(now);
@@ -361,11 +307,8 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []); // runs once on mount
 
-  // ─────────────────────────────────────────────────────────
-  // HANDLERS
-  // ─────────────────────────────────────────────────────────
 
-  const handleSkipRequest = async () => {
+  const handleSkipRequest = async () => {   ////
     if (!myProfileId || myPosition === null) return;
 
     if (skipReason.length < 20) {
@@ -473,9 +416,9 @@ const Dashboard = () => {
     return hoursLeft > 0 ? `${hoursLeft} hours` : "Resuming soon...";
   };
 
-  // ─────────────────────────────────────────────────────────
+  // ------------------------------------------------------------
   // UI HELPERS
-  // ─────────────────────────────────────────────────────────
+  // ------------------------------------------------------------
   const getSkipStatusBadge = (status: SkipRequest["status"]) => {
     const map = {
       pending:  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">Pending Review ⏳</Badge>,
@@ -485,9 +428,9 @@ const Dashboard = () => {
     return map[status] ?? <Badge>{status}</Badge>;
   };
 
-  // ─────────────────────────────────────────────────────────
+  // ------------------------------------------------------------
   // RENDER
-  // ─────────────────────────────────────────────────────────
+  // ------------------------------------------------------------
   const activeSkipRequest = isSkipRequestActive(skipRequest, myPosition) ? skipRequest : null;
 
   return (
@@ -651,7 +594,7 @@ const Dashboard = () => {
                       • No active skip request exists (pending or reviewed today)
                     i.e. canRequestSkip === true
                   */}
-                  {canRequestSkip && (
+                  {canRequestSkip && (   ////
                     <>
                       <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />

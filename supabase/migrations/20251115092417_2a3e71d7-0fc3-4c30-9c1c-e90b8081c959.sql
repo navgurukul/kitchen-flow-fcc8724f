@@ -1,5 +1,5 @@
 -- Create kitchen_queue table
-CREATE TABLE public.kitchen_queue (
+CREATE TABLE public.kitchen_queue ( 
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   queue_position INTEGER NOT NULL UNIQUE,

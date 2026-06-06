@@ -14,7 +14,7 @@ export type Database = {
   };
   public: {
     Tables: {
-      kitchen_assignments: {
+      kitchen_assignments: { ////
         Row: {
           assignment_date: string;
           created_at: string;
@@ -38,14 +38,14 @@ export type Database = {
         };
         Relationships: [];
       };
-      kitchen_queue: {
+      kitchen_queue: { //
         Row: {
           created_at: string;
           id: string;
           joined_at: string;
           last_duty_date: string | null;
           profile_id: string;
-          queue_position: number;
+          queue_position: number; //
           updated_at: string;
         };
         Insert: {
@@ -178,7 +178,7 @@ export type Database = {
           created_at: string;
           id: string;
           profile_id: string;
-          queue_position_at_request: number;
+          queue_position_at_request: number;  //
           reason: string;
           requested_at: string;
           review_notes: string | null;
@@ -190,7 +190,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
-          profile_id: string;
+          profile_id: string; //
           queue_position_at_request: number;
           reason: string;
           requested_at?: string;
@@ -296,7 +296,7 @@ export type Database = {
         };
         Returns: boolean;
       };
-      update_queue_positions_batch: {
+      update_queue_positions_batch: { //
         Args: { position_updates: Json };
         Returns: undefined;
       };
