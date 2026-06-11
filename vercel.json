@@ -1,6 +1,5 @@
 {
-  "version": 2,
-  "routes": [
+  "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"

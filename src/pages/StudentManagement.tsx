@@ -120,37 +120,41 @@ const StudentManagement = () => {
     try {
       setLoading(true);
 
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles_with_roles")
-        .select(
-          "id, full_name, email, status, created_at, last_queue_position, user_id, role"
-        )
-        .order("full_name");
+      const today = getISTDate(0);
+      const tomorrow = getISTDate(1);
+
+      // Make all queries in parallel for faster loading
+      const [
+        { data: profilesData, error: profilesError },
+        { data: queueData, error: queueError },
+        { data: todayAssignment },
+        { data: tomorrowAssignment },
+      ] = await Promise.all([
+        supabase
+          .from("profiles_with_roles")
+          .select(
+            "id, full_name, email, status, created_at, last_queue_position, user_id, role"
+          )
+          .order("full_name"),
+        supabase
+          .from("kitchen_queue")
+          .select("profile_id, queue_position"),
+        supabase
+          .from("kitchen_assignments")
+          .select("profile_ids")
+          .eq("assignment_date", today)
+          .maybeSingle(),
+        supabase
+          .from("kitchen_assignments")
+          .select("profile_ids")
+          .eq("assignment_date", tomorrow)
+          .maybeSingle(),
+      ]);
 
       if (profilesError) throw profilesError;
-
-      const { data: queueData, error: queueError } = await supabase
-        .from("kitchen_queue")
-        .select("profile_id, queue_position");
-
       if (queueError) throw queueError;
 
-      const today = getISTDate(0);
-      const { data: todayAssignment } = await supabase
-        .from("kitchen_assignments")
-        .select("profile_ids")
-        .eq("assignment_date", today)
-        .maybeSingle();
-
       const todayProfileIds = todayAssignment?.profile_ids || [];
-
-      const tomorrow = getISTDate(1);
-      const { data: tomorrowAssignment } = await supabase
-        .from("kitchen_assignments")
-        .select("profile_ids")
-        .eq("assignment_date", tomorrow)
-        .maybeSingle();
-
       const tomorrowProfileIds = tomorrowAssignment?.profile_ids || [];
 
       const studentsWithEligibility =
