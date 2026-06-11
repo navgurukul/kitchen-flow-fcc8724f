@@ -11,6 +11,7 @@ import Layout from  '@/components/Layout';
  
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import QueueManagement from "./pages/QueueManagement";
 import StudentManagement from "./pages/StudentManagement";
@@ -31,7 +32,7 @@ const App = () => (
           <Routes>
             {/* 1. Routes WITHOUT Layout (e.g., Auth, 404) */}
             <Route path="/auth" element={<Auth />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             
             {/* 2. Routes WITH Layout (All other main pages) */}
             <Route element={<Layout />}>
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/student-management" element={<StudentManagement />} />
               <Route path="/skip-requests" element={<SkipRequests />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
 
           </Routes>
         </BrowserRouter>
