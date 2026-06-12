@@ -65,7 +65,7 @@ interface Student {
 type StatusFilter = "all" | "active" | "inactive";
 
 const StudentManagement = () => {
-  const { role } = useAuth();
+  const { role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
@@ -109,12 +109,13 @@ const StudentManagement = () => {
   });
 
   useEffect(() => {
+    if (authLoading) return;
     if (role !== "coordinator") {
       navigate("/dashboard");
       return;
     }
     fetchStudents();
-  }, [role, navigate]);
+  }, [role, authLoading, navigate]);
 
   const fetchStudents = async () => {
     try {

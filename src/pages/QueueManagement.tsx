@@ -77,7 +77,7 @@ const QueueItem = ({ item, section }: QueueItemProps) => {
 };
 
 const QueueManagement = () => {
-  const { role, signOut } = useAuth();
+  const { role, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -95,13 +95,14 @@ const QueueManagement = () => {
   );
 
   useEffect(() => {
+    if (authLoading) return;
     if (role !== "coordinator") {
       navigate("/dashboard");
       return;
     }
     fetchQueue();
     fetchAvailableStudents();
-  }, [role, navigate]);
+  }, [role, authLoading, navigate]);
 
   const fetchQueue = async () => {
     try {

@@ -1,73 +1,41 @@
-# Welcome to your Lovable project
+# KitchenFlow
 
-## Project info
+Kitchen duty management system for Navgurukul student communities. Ensures fair, transparent rotation of daily kitchen responsibilities.
 
-**URL**: https://lovable.dev/projects/93b577bd-41ff-49fd-8eab-190f8487fa0f
+## Stack
 
-## How can I edit this code?
+- Vite + React 18 + TypeScript
+- Tailwind CSS + shadcn/ui
+- Supabase (auth, database, edge functions)
+- Deployed on Vercel
 
-There are several ways of editing your application.
+## Local Development
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/93b577bd-41ff-49fd-8eab-190f8487fa0f) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requires Node.js and npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone https://github.com/navgurukul/kitchen-flow-fcc8724f
+cd kitchen-flow-fcc8724f
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Create a `.env` file in the project root:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+VITE_SUPABASE_PROJECT_ID=your_project_id
+```
 
-**Use GitHub Codespaces**
+## Features
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Google OAuth restricted to @navgurukul.org accounts
+- Role-based access: coordinator and student views
+- Automated daily queue rotation at midnight IST
+- Skip request workflow with coordinator approval
+- Real-time updates via Supabase subscriptions
 
-## What technologies are used for this project?
+## Built by
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/93b577bd-41ff-49fd-8eab-190f8487fa0f) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Prachi, Nikita, and Renuka — Navgurukul students.

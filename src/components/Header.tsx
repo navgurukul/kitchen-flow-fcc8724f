@@ -14,7 +14,6 @@ const Header = () => {
 
     const handleSignOut = async () => {
         await signOut();
-        navigate('/'); 
     };
 
  // Header.jsx में return () के अंदर
@@ -25,9 +24,9 @@ return (
                fixed top-0 w-full z-20" /* z-index बढ़ाया गया */
   >
     {/* 1. Logo Section (No Change) */}
-    <Link to="#hero-section" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+    <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
       <div className="flex items-center gap-1 sm:gap-2 cursor-pointer flex-shrink-0">
-        <ChefHat className="w-6 h-6 sm:w-8 sm:h-8 text-[#E91E63]" /> 
+        <ChefHat className="w-6 h-6 sm:w-8 sm:h-8 text-[#E91E63]" />
         <span className="text-xl sm:text-2xl font-bold text-[#E91E63]">KitchenFlow</span>
       </div>
     </Link>

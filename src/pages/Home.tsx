@@ -1,4 +1,4 @@
- import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
  
 import { ChefHat, LogOut, Calendar, BarChart2, Settings, Bell, CheckCircle, Linkedin, Github, Phone, Facebook, Twitter } from "lucide-react"; 
@@ -6,11 +6,9 @@ import { useAuth } from "@/hooks/useAuth";
 
 const Home = () => {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/'); 
   };
 
 
