@@ -99,6 +99,7 @@ const Dashboard = () => {
   const [pauseReason,       setPauseReason]        = useState("");
   const [showRotateDialog,  setShowRotateDialog]   = useState(false);
   const [isRotating,        setIsRotating]         = useState(false);
+  const [autoRotationAttempted, setAutoRotationAttempted] = useState(false);
 
   
   const canRequestSkip =
@@ -222,6 +223,29 @@ const Dashboard = () => {
     fetchTeamData();
     if (role === "coordinator") fetchRotationSettings();
   }, [user, role]);
+
+  useEffect(() => {
+    if (role !== "coordinator") return;
+    if (loading) return;
+    if (autoRotationAttempted) return;
+    if (todayTeam.length === 0 || tomorrowTeam.length > 0) return;
+
+    setAutoRotationAttempted(true);
+
+    const autoRotate = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("rotate-kitchen-queue");
+        if (error) throw error;
+        if (data?.success) {
+          await fetchTeamData();
+        }
+      } catch (error) {
+        console.error("Auto rotation failed:", error);
+      }
+    };
+
+    void autoRotate();
+  }, [role, loading, todayTeam.length, tomorrowTeam.length, autoRotationAttempted]);
 
   
   useEffect(() => {

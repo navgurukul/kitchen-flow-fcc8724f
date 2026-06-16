@@ -28,10 +28,7 @@ const Home = () => {
         { name: "Nikita", linkedIn: "https://www.linkedin.com/in/nikitapanwar24/", github: "https://github.com/panwarnikita", phone: "tel:+919340194046" },
         { name: "Renuka", linkedIn: "https://www.linkedin.com/in/renuka-chouhan-05320432a/", github: "https://github.com/renukachouhan-24", phone: "tel:+918305319363" }
     ];
-
-
-  
-  const HeroFeatureCard = ({ title, description }) => (
+    const HeroFeatureCard = ({ title, description }) => (
     <div className="flex flex-col items-center p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition">
       <div className="flex items-center gap-2 mb-2">
         <CheckCircle className="w-5 h-5 text-pink-600" />

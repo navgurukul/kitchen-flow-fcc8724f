@@ -236,6 +236,40 @@ Deno.serve(async (req) => {
       .toISOString()
       .split("T")[0];
 
+    // Guard against duplicate runs from cron/manual triggers on the same day.
+    // If today's rotation already exists, skip re-rotating the queue.
+    const { data: existingRotation, error: rotationHistoryError } = await supabase
+      .from("queue_history")
+      .select("id")
+      .eq("rotation_date", today)
+      .maybeSingle();
+
+    if (rotationHistoryError) {
+      console.error("Error checking rotation history:", rotationHistoryError);
+    }
+
+    if (existingRotation) {
+      console.log(`Rotation already completed for ${today}. Skipping duplicate run.`);
+
+      const { data: existingAssignments } = await supabase
+        .from("kitchen_assignments")
+        .select("assignment_date, profile_ids")
+        .in("assignment_date", [today, tomorrow]);
+
+      const todayAssignment = existingAssignments?.find((a) => a.assignment_date === today);
+      const tomorrowAssignment = existingAssignments?.find((a) => a.assignment_date === tomorrow);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Rotation already completed today",
+          todayTeam: todayAssignment?.profile_ids?.length || 0,
+          tomorrowTeam: tomorrowAssignment?.profile_ids?.length || 0,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Take first 5 for today, next 5 for tomorrow
     const todayTeam = activeQueue.slice(0, 5);
     const tomorrowTeam = activeQueue.slice(5, 10);
